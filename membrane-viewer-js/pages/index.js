@@ -1,5 +1,4 @@
 import Head from 'next/head'
-import Image from 'next/image'
 
 export default function Home() {
   return (
@@ -49,18 +48,12 @@ export default function Home() {
         </div>
 
         <div>
-        <Image
-          src="/images/image1.png"
-          alt="Our first image :)"
-          width={500}
-          height={500}
-        />
-          <Image
-            src="/images/image2.png"
-            alt="Our second image :)"
-            width={500}
-            height={500}
-          />
+        <img
+          src={require('../public/images/image1.png?resize&size=300')}
+          alt="Our first image :)"/>
+          <img
+            src={require('../public/images/image2.png?resize&size=300')}
+            alt="Our second image :)"/>
         </div>
 
       </main>
