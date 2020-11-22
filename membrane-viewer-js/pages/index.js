@@ -2,29 +2,49 @@ import Head from 'next/head'
 import 'react-image-gallery/styles/css/image-gallery.css'
 import ImageGallery from 'react-image-gallery';
 
+import { useEffect } from 'react'
+import { useRouter } from 'next/router'
 
 const images = [
   {
-    original: require('../public/images/image1.png'),
-    thumbnail: require('../public/images/image1.png?resize&size=100')
+    original: String(require('../public/images/image1.png')),
+    thumbnail: String(require('../public/images/image1.png?resize&size=100'))
   },
   {
-    original: require('../public/images/image2.png'),
-    thumbnail: require('../public/images/image2.png?resize&size=100')
+    original: String(require('../public/images/image2.png')),
+    thumbnail: String(require('../public/images/image2.png?resize&size=100'))
   },
   {
-    original: require('../public/images/image1.png'),
-    thumbnail: require('../public/images/image1.png?resize&size=100')
+    original: String(require('../public/images/image1.png')),
+    thumbnail: String(require('../public/images/image1.png?resize&size=100'))
   }
 ];
 
 export default function Home() {
+  const router = useRouter()
+  const imageIdx = router.query.counter ? parseInt(router.query.counter) : 0
+
+  function ourOnSlide(idx) {
+    console.log(`Image number ${idx}`)
+    // useEffect(() => {
+    //   // Always do navigations after the first render
+    //   router.push(`/?counter=${idx}`, undefined, { shallow: true })
+    // }, [])
+    router.push(`/?counter=${idx}`, undefined, { shallow: true })
+  }
+
+  // useEffect(() => {
+  //   // The counter changed!
+  // }, [router.query.counter])
+  
+  console.log(`What's the counter: ${router.query.counter}`)
+  console.log(`Images: ${images[0].thumbnail} ${typeof(images[0].thumbnail)}`)
+  
   return (
     <div className="container">
       <Head>
         <title>Membrane Viewer</title>
         <link rel="icon" href="/favicon.ico" />
-        <link rel="stylesheet" href="carousel.css" />
       </Head>
 
       <main>
@@ -46,11 +66,13 @@ export default function Home() {
             <p>Find in-depth information about Next.js features and API.</p>
           </a>
         </div>
+
         {/* Comments 
         onChange={onChange} onClickItem={onClickItem} onClickThumb={onClickThumb}
         */}
 
-        <ImageGallery items={images} slideDuration={100} showPlayButton={false} />
+        <ImageGallery items={images} slideDuration={100} showPlayButton={false} 
+          startIndex={imageIdx} showIndex={true} onSlide={ourOnSlide} />
 
       </main>
 
