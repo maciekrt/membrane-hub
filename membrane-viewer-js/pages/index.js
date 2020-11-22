@@ -58,7 +58,7 @@ export default function Home() {
         </h1>
 
         <p className="description">
-          Get started by editing <code>your mum.</code>
+          To infinity and beyond! - Buzz Lightyear
         </p>
 
         <div className="grid">
