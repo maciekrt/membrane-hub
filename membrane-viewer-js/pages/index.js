@@ -1,4 +1,22 @@
 import Head from 'next/head'
+import 'react-image-gallery/styles/css/image-gallery.css'
+import ImageGallery from 'react-image-gallery';
+
+
+const images = [
+  {
+    original: require('../public/images/image1.png'),
+    thumbnail: require('../public/images/image1.png?resize&size=100')
+  },
+  {
+    original: require('../public/images/image2.png'),
+    thumbnail: require('../public/images/image2.png?resize&size=100')
+  },
+  {
+    original: require('../public/images/image1.png'),
+    thumbnail: require('../public/images/image1.png?resize&size=100')
+  }
+];
 
 export default function Home() {
   return (
@@ -6,6 +24,7 @@ export default function Home() {
       <Head>
         <title>Membrane Viewer</title>
         <link rel="icon" href="/favicon.ico" />
+        <link rel="stylesheet" href="carousel.css" />
       </Head>
 
       <main>
@@ -27,13 +46,12 @@ export default function Home() {
             <p>Find in-depth information about Next.js features and API.</p>
           </a>
         </div>
-        {/* Comments */}
-        <div>
-          <img src={require('../public/images/image1.png?resize&size=100')}
-          alt="Our first image :)"/>
-          <img src={require('../public/images/image2.png?resize&size=100')}
-            alt="Our second image :)"/>
-        </div>
+        {/* Comments 
+        onChange={onChange} onClickItem={onClickItem} onClickThumb={onClickThumb}
+        */}
+
+        <ImageGallery items={images} slideDuration={100} showPlayButton={false} />
+
       </main>
 
       <footer>
