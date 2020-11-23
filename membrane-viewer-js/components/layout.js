@@ -1,20 +1,16 @@
 import Head from 'next/head'
 import styles from './layout.module.css'
-import utilStyles from '../styles/utils.module.css'
 import Link from 'next/link'
 
-const name = 'Maciej Zdanowicz'
-export const siteTitle = 'Next.js Sample Website'
+export const siteTitle = 'Membrane Viewer'
+export const siteDescription = 'Membrane Viewer description'
 
-export default function Layout({ children, home }) {
+export default function Layout({children}) {
   return (
     <div className={styles.container}>
       <Head>
         <link rel="icon" href="/favicon.ico" />
-        <meta
-          name="description"
-          content="Learn how to build a personal website using Next.js"
-        />
+        <meta name="description" content={siteDescription}/>
         <meta
           property="og:image"
           content={`https://og-image.now.sh/${encodeURI(
@@ -24,43 +20,34 @@ export default function Layout({ children, home }) {
         <meta name="og:title" content={siteTitle} />
         <meta name="twitter:card" content="summary_large_image" />
       </Head>
+
       <header className={styles.header}>
-        {home ? (
-          <>
-            <img
-              src="/images/profile.jpg"
-              className={`${styles.headerHomeImage} ${utilStyles.borderCircle}`}
-              alt={name}
-            />
-            <h1 className={utilStyles.heading2Xl}>{name}</h1>
-          </>
-        ) : (
-            <>
-              <Link href="/">
-                <a>
-                  <img
-                    src="/images/profile.jpg"
-                    className={`${styles.headerImage} ${utilStyles.borderCircle}`}
-                    alt={name}
-                  />
-                </a>
-              </Link>
-              <h2 className={utilStyles.headingLg}>
-                <Link href="/">
-                  <a className={utilStyles.colorInherit}>Dupek: {name}</a>
-                </Link>
-              </h2>
-            </>
-          )}
+        <h1 className={styles.title}>
+          Welcome to Membrane Viewer
+        </h1>
+        <p className={styles.description}>
+          To infinity and beyond! - Buzz Lightyear
+        </p>
       </header>
+
       <main> {children} </main>
-      {!home && (
-        <div className={styles.backToHome}>
+
+      <footer className={styles.footer}>
+        {/* <div className={styles.backToHome}>
           <Link href="/">
             <a>← Back to home</a>
           </Link>
+        </div> */}
+        <div>
+          <a href="https://vercel.com?utm_source=create-next-app&utm_medium=default-template&utm_campaign=create-next-app"
+          target="_blank"
+          rel="noopener noreferrer" >     
+            Powered by{' '}
+            <img src="/vercel.svg" alt="Vercel Logo" className="logo" />
+          </a>
         </div>
-      )}
+      </footer>
+
     </div>
   )
 }
