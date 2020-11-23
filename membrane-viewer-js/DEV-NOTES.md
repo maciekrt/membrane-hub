@@ -6,3 +6,4 @@
 2. Next.JS component Image unfortunately does not work -- npm export does not work in Netlify (Image requires some node component which could not be deployed using static export). We use [next-optimized-image](https://github.com/cyrilwanner/next-optimized-image) instead.
 3. We had a little problem with responsive-loader [responsive-loader with sharp error #50](https://github.com/cyrilwanner/next-optimized-images/issues/50). The solution is out [there](https://github.com/cyrilwanner/next-optimized-images/issues/50#issuecomment-687892036).
 4. We are now using [react-image-gallery](https://github.com/xiaolin/react-image-gallery).
+5. There's an issue with css files.

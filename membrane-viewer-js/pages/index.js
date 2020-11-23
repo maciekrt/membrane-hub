@@ -7,22 +7,31 @@ import utilStyles from '../styles/utils.module.css'
 // import { useEffect } from 'react'
 import { useRouter } from 'next/router'
 
-const images = [
-  {
-    original: String(require('../public/images/image1.png')),
-    thumbnail: String(require('../public/images/image1.png?resize&size=100'))
-  },
-  {
-    original: String(require('../public/images/image2.png')),
-    thumbnail: String(require('../public/images/image2.png?resize&size=100'))
-  },
-  {
-    original: String(require('../public/images/image1.png')),
-    thumbnail: String(require('../public/images/image1.png?resize&size=100'))
-  }
-];
+export async function getStaticProps() {
+  // Call an external API endpoint to get posts.
+  // You can use any data fetching library
+  // const res = await fetch('https://.../posts')
+  // const posts = await res.json()
 
-export default function Home() {
+  var fs = require('fs');
+  var files = fs.readdirSync('public/images/nencki.lsm/');
+  var images = files.map(file => 
+    ({
+      original: String(require('../public/images/nencki.lsm/' + file)),
+      thumbnail: String(require('../public/images/nencki.lsm/' + file + '?resize&size=100'))
+    })
+  )
+
+  // By returning { props: posts }, the Blog component
+  // will receive `posts` as a prop at build time
+  return {
+    props: {
+      images
+    },
+  }
+}
+
+export default function Home({images}) {
   const router = useRouter()
   const imageIdx = router.query.counter ? parseInt(router.query.counter) : 0
 
@@ -57,8 +66,10 @@ export default function Home() {
           <p>Find in-depth information about Next.js features and API.</p>
         </a>
       </div>
-      <ImageGallery items={images} slideDuration={100} showPlayButton={false}
+      <div>
+        <ImageGallery items={images} slideDuration={100} showPlayButton={false}
         startIndex={imageIdx} showIndex={true} onSlide={ourOnSlide} />
+      </div>
     </Layout>
   )
 }

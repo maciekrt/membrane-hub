@@ -62,3 +62,6 @@ code {
   font-family: Menlo, Monaco, Lucida Console, Liberation Mono,
     DejaVu Sans Mono, Bitstream Vera Sans Mono, Courier New, monospace;
 }
+
+.image-gallery-slide img{ width: max-content } 
+.image-gallery-thumbnails-container{ width: 800px }
