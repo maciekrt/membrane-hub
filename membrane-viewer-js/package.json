@@ -16,11 +16,11 @@
     "next": "^10.0.0",
     "react": "16.13.1",
     "react-dom": "16.13.1",
-    "react-image-gallery": "^1.0.8",
-    "sharp": "^0.26.3"
+    "react-image-gallery": "^1.0.8"
   },
   "devDependencies": {
     "jimp": "^0.16.1",
-    "responsive-loader": "^2.2.0"
+    "responsive-loader": "^2.2.0",
+    "sharp": "^0.26.3"
   }
 }
