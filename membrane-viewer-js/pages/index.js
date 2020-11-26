@@ -36,7 +36,7 @@ export default function Home({images}) {
   const imageIdx = router.query.counter ? parseInt(router.query.counter) : 0
 
   function ourOnSlide(idx) {
-    console.log(`Image number ${idx}`)
+    // console.log(`Image number ${idx}`)
     // useEffect(() => {
     //   // Always do navigations after the first render
     //   router.push(`/?counter=${idx}`, undefined, { shallow: true })
@@ -48,8 +48,8 @@ export default function Home({images}) {
   //   // The counter changed!
   // }, [router.query.counter])
 
-  console.log(`What's the counter: ${router.query.counter}`)
-  console.log(`Images: ${images[0].thumbnail} ${typeof (images[0].thumbnail)}`)
+  // console.log(`What's the counter: ${router.query.counter}`)
+  // console.log(`Images: ${images[0].thumbnail} ${typeof (images[0].thumbnail)}`)
 
   return (
     <Layout>
@@ -68,7 +68,7 @@ export default function Home({images}) {
       </div>
       <div>
         <ImageGallery items={images} slideDuration={100} showPlayButton={false}
-        startIndex={imageIdx} showIndex={true} onSlide={ourOnSlide} />
+        startIndex={imageIdx} showIndex={true} onSlide={ourOnSlide} lazyLoad={true} />
       </div>
     </Layout>
   )
