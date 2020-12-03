@@ -83,24 +83,23 @@ export async function getServerSideProps(context) {
     // const res = await fetch('https://.../posts')
     // const posts = await res.json()
     const session = await getSession(context);
-    console.log(`Session: ${session}`)
     if(session) {
       console.log(`Session[user]: ${session.user.email}`)
     } else {
       console.log(`No session..`)
     }
-    var images = "Nothing";
+    var images = null
     if (session && session.user.email == 'm.zdanowicz@gmail.com') {
       var fs = require('fs');
-      var files = fs.readdirSync('public/images/nencki.lsm/');
+      // var files = fs.readdirSync('public/images/nencki.lsm/');
+      var files = ['22_00', '23_00'];
       images = files.map(file =>
           ({
-              original: String(require('../public/images/nencki.lsm/' + file)),
-              thumbnail: String(require('../public/images/nencki.lsm/' + file + '?resize&size=100'))
+              original: 'api/images/nencki.lsm/main_' + file + '.png',
+              thumbnail: 'api/images/nencki.lsm/thumb_' + file + '.png'
           })
       )
     }
-    console.log(images)
     // By returning { props: posts }, the Blog component
     // will receive `posts` as a prop at build time
     return {
