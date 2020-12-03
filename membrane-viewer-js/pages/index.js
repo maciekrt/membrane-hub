@@ -1,39 +1,25 @@
-import Head from 'next/head'
-import 'react-image-gallery/styles/css/image-gallery.css'
-import ImageGallery from 'react-image-gallery';
-import Layout, { siteTitle } from '../components/layout'
-import utilStyles from '../styles/utils.module.css'
+import React from 'react'
 
 // import { useEffect } from 'react'
+import Head from 'next/head'
 import { useRouter } from 'next/router'
 
-export async function getStaticProps() {
-  // Call an external API endpoint to get posts.
-  // You can use any data fetching library
-  // const res = await fetch('https://.../posts')
-  // const posts = await res.json()
+import Layout, { siteTitle } from '../components/layout'
+import utilStyles from '../styles/utils.module.css'
+import 'react-image-gallery/styles/css/image-gallery.css'
+import ImageGallery from 'react-image-gallery';
 
-  var fs = require('fs');
-  var files = fs.readdirSync('public/images/nencki.lsm/');
-  var images = files.map(file => 
-    ({
-      original: String(require('../public/images/nencki.lsm/' + file)),
-      thumbnail: String(require('../public/images/nencki.lsm/' + file + '?resize&size=100'))
-    })
-  )
+import {
+  signIn,
+  signOut,
+  useSession,
+  getSession
+} from 'next-auth/client'
 
-  // By returning { props: posts }, the Blog component
-  // will receive `posts` as a prop at build time
-  return {
-    props: {
-      images
-    },
-  }
-}
-
-export default function Home({images}) {
+export default function Home({ images }) {
   const router = useRouter()
   const imageIdx = router.query.counter ? parseInt(router.query.counter) : 0
+  const [session, loading] = useSession()
 
   function ourOnSlide(idx) {
     // console.log(`Image number ${idx}`)
@@ -56,6 +42,16 @@ export default function Home({images}) {
       <Head>
         <title>{siteTitle}</title>
       </Head>
+      <div>
+          {!session && <>
+            Not signed in <br />
+            <button onClick={signIn}>Sign in</button>
+          </>}
+          {session && <>
+            Signed in as {session.user.email} <br />
+            <button onClick={signOut}>Sign out</button>
+          </>}
+      </div>
       <div className={utilStyles.grid}>
         <a href="https://nextjs.org/docs" className={utilStyles.card}>
           <h3>Upload a file</h3>
@@ -67,9 +63,49 @@ export default function Home({images}) {
         </a>
       </div>
       <div>
-        <ImageGallery items={images} slideDuration={100} showPlayButton={false}
-        startIndex={imageIdx} showIndex={true} onSlide={ourOnSlide} lazyLoad={true} />
+        <>
+          {!session && <>
+            No images visible here..
+          </>}
+          {session && <>
+            <ImageGallery items={images} slideDuration={100} showPlayButton={false} 
+            startIndex={imageIdx} showIndex={true} onSlide={ourOnSlide} lazyLoad={true} /> 
+          </>} 
+        </>
       </div>
     </Layout>
   )
+}
+
+export async function getServerSideProps(context) {
+    // Call an external API endpoint to get posts.
+    // You can use any data fetching library
+    // const res = await fetch('https://.../posts')
+    // const posts = await res.json()
+    const session = await getSession(context);
+    console.log(`Session: ${session}`)
+    if(session) {
+      console.log(`Session[user]: ${session.user.email}`)
+    } else {
+      console.log(`No session..`)
+    }
+    var images = "Nothing";
+    if (session && session.user.email == 'm.zdanowicz@gmail.com') {
+      var fs = require('fs');
+      var files = fs.readdirSync('public/images/nencki.lsm/');
+      images = files.map(file =>
+          ({
+              original: String(require('../public/images/nencki.lsm/' + file)),
+              thumbnail: String(require('../public/images/nencki.lsm/' + file + '?resize&size=100'))
+          })
+      )
+    }
+    console.log(images)
+    // By returning { props: posts }, the Blog component
+    // will receive `posts` as a prop at build time
+    return {
+        props: {
+          images
+        }
+    }
 }
