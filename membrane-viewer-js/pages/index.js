@@ -42,25 +42,25 @@ export default function Home({ images }) {
       <Head>
         <title>{siteTitle}</title>
       </Head>
-      <div>
-          {!session && <>
-            Not signed in <br />
-            <button onClick={signIn}>Sign in</button>
-          </>}
-          {session && <>
-            Signed in as {session.user.email} <br />
-            <button onClick={signOut}>Sign out</button>
-          </>}
-      </div>
       <div className={utilStyles.grid}>
         <a href="https://nextjs.org/docs" className={utilStyles.card}>
           <h3>Upload a file</h3>
           <p>Uploading a nuclei image and the corresponding labelling.</p>
         </a>
-        <a href="https://nextjs.org/docs" className={utilStyles.card}>
-          <h3>Documentation &rarr;</h3>
-          <p>Find in-depth information about Next.js features and API.</p>
-        </a>
+        <>
+        {!session &&
+          <a href="https://nextjs.org/docs" className={utilStyles.card} onClick={signIn} >
+            <h3>Log in</h3>
+            <p>We are currently supporting log in using Google.</p>
+          </a>
+        }
+        {session &&
+          <a href="/" className={utilStyles.card} onClick={signOut}>
+          <h3>Log out</h3>
+          <p>You are logged in as {session.user.email}</p>
+          </a>
+        }  
+        </>
       </div>
       <div>
         <>
@@ -68,8 +68,8 @@ export default function Home({ images }) {
             No images visible here..
           </>}
           {session && <>
-            <ImageGallery items={images} slideDuration={100} showPlayButton={false} 
-            startIndex={imageIdx} showIndex={true} onSlide={ourOnSlide} lazyLoad={true} /> 
+            <ImageGallery items={images} slideDuration={50} showPlayButton={false}
+              showIndex={true} startIndex={imageIdx} lazyLoad={true} /> 
           </>} 
         </>
       </div>
@@ -88,20 +88,25 @@ export async function getServerSideProps(context) {
     } else {
       console.log(`No session..`)
     }
-    var images = null
+    var images = []
     if (session && session.user.email == 'm.zdanowicz@gmail.com') {
       var fs = require('fs');
+      const parse = require('csv-parse/lib/sync')
+      var files = []
+      var rawFile = fs.readFileSync('/Users/maciek/JS/data-membrane-viewer/public/images/nencki.lsm/images.csv')
+      const records = parse(rawFile, {
+        columns: true,
+        skip_empty_lines: true
+      })
+      images = records.map(file =>
+            ({
+              original: `images/nencki.lsm/${file['name']}_x1.png`,
+              thumbnail: `images/nencki.lsm/${file['name']}_100x100.png`
+            })
+        )
       // var files = fs.readdirSync('public/images/nencki.lsm/');
-      var files = ['22_00', '23_00'];
-      images = files.map(file =>
-          ({
-              original: 'api/images/nencki.lsm/main_' + file + '.png',
-              thumbnail: 'api/images/nencki.lsm/thumb_' + file + '.png'
-          })
-      )
-    }
-    // By returning { props: posts }, the Blog component
-    // will receive `posts` as a prop at build time
+      // var files = ['20_00.png', '21_00.png', '22_00.png', '23_00.png', '24_00.png', '25_00.png', '26_00.png', '27_00.png'];
+    } 
     return {
         props: {
           images

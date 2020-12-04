@@ -10,6 +10,8 @@
   },
   "dependencies": {
     "@mrroll/next-optimized-images": "^2.6.2",
+    "csv-parse": "^4.14.1",
+    "csv-parser": "^3.0.0",
     "imagemin-mozjpeg": "^9.0.0",
     "imagemin-optipng": "^8.0.0",
     "imagemin-svgo": "^8.0.0",

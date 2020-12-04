@@ -9,8 +9,8 @@ const options = {
             clientSecret: process.env.GOOGLE_SECRET
         })
     ],
-    // Optional SQL or MongoDB database to persist users
-    database: process.env.DATABASE_URL
+    // // Optional SQL or MongoDB database to persist users
+    // database: process.env.DATABASE_URL
 }
 
 export default (req, res) => NextAuth(req, res, options)
