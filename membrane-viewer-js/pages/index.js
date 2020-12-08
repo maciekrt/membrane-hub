@@ -5,6 +5,7 @@ import Head from 'next/head'
 import { useRouter } from 'next/router'
 
 import Layout, { siteTitle } from '../components/layout'
+import ListDatasets from '../components/listDatasets'
 import utilStyles from '../styles/utils.module.css'
 import 'react-image-gallery/styles/css/image-gallery.css'
 import ImageGallery from 'react-image-gallery';
@@ -16,7 +17,7 @@ import {
   getSession
 } from 'next-auth/client'
 
-export default function Home({ images }) {
+export default function Home({ images, dirs }) {
   const router = useRouter()
   const imageIdx = router.query.counter ? parseInt(router.query.counter) : 0
   const [session, loading] = useSession()
@@ -49,13 +50,13 @@ export default function Home({ images }) {
         </a>
         <>
         {!session &&
-          <a href="https://nextjs.org/docs" className={utilStyles.card} onClick={signIn} >
+          <a className={utilStyles.card} onClick={signIn} >
             <h3>Log in</h3>
             <p>We are currently supporting log in using Google.</p>
           </a>
         }
         {session &&
-          <a href="/" className={utilStyles.card} onClick={signOut}>
+          <a className={utilStyles.card} onClick={signOut}>
           <h3>Log out</h3>
           <p>You are logged in as {session.user.email}</p>
           </a>
@@ -67,11 +68,11 @@ export default function Home({ images }) {
           {!session && <>
             No images visible here..
           </>}
-          {session && <>
-            <ImageGallery items={images} slideDuration={50} showPlayButton={false}
-              showIndex={true} startIndex={imageIdx} lazyLoad={true} /> 
-          </>} 
-        </>
+          {session && 
+            <> 
+              <ListDatasets dirs={dirs} />
+            </>}
+        </> 
       </div>
     </Layout>
   )
@@ -83,33 +84,23 @@ export async function getServerSideProps(context) {
     // const res = await fetch('https://.../posts')
     // const posts = await res.json()
     const session = await getSession(context);
+
     if(session) {
       console.log(`Session[user]: ${session.user.email}`)
     } else {
       console.log(`No session..`)
     }
-    var images = []
-    if (session && session.user.email == 'm.zdanowicz@gmail.com') {
+
+    var dirs = []
+    if (session) {
+      const FOLDER = process.env.IMAGES_FOLDER;
       var fs = require('fs');
-      const parse = require('csv-parse/lib/sync')
-      var files = []
-      var rawFile = fs.readFileSync('/Users/maciek/JS/data-membrane-viewer/public/images/nencki.lsm/images.csv')
-      const records = parse(rawFile, {
-        columns: true,
-        skip_empty_lines: true
-      })
-      images = records.map(file =>
-            ({
-              original: `images/nencki.lsm/${file['name']}_x1.png`,
-              thumbnail: `images/nencki.lsm/${file['name']}_100x100.png`
-            })
-        )
-      // var files = fs.readdirSync('public/images/nencki.lsm/');
-      // var files = ['20_00.png', '21_00.png', '22_00.png', '23_00.png', '24_00.png', '25_00.png', '26_00.png', '27_00.png'];
-    } 
+      dirs = fs.readdirSync(`${FOLDER}${session.user.email}`);
+      console.log(`Dirs: ${dirs}`)
+    }
     return {
         props: {
-          images
+          dirs: dirs,
         }
     }
 }
