@@ -9,7 +9,6 @@ export default async function handler(req, res) {
     const FOLDER = process.env.IMAGES_FOLDER;
 
     // ADD SECURITY CHECK HERE!!! IMPORTANT!!!
-
     var name = imagePath.join('/');
 
     //console.log(`user: ${imagePath} ${name} ${FOLDER}`)
@@ -17,6 +16,7 @@ export default async function handler(req, res) {
     var fs = require('fs')
     var buffer = fs.readFileSync(`${FOLDER}${name}`);
     //console.log(`len: ${buffer && buffer.length}`)
+    res.setHeader('Cache-Control', 'max-age=3155760');
     res.status(200).send(buffer)
     res.end(null)
 }

@@ -8,7 +8,7 @@ import ImageGallery from 'react-image-gallery';
 
 import { useSession, getSession } from 'next-auth/client'
 
-export default function Dataset({ name, images}) {
+export default function Dataset({ name, images, error }) {
     const [session, loading] = useSession()
     return (
         <Layout>
@@ -22,12 +22,17 @@ export default function Dataset({ name, images}) {
             </div>
             <div>
             {session && <>
-                <p>Name is {name}</p>
-                <ImageGallery items={images} slideDuration={50} showPlayButton={false}
-                    showIndex={true} startIndex={0} lazyLoad={true} />  
-            </>}
+                <p>Name is {name}. Error MSG {error}.</p>
+                <> 
+                    { error=='Fine' && <>
+                        <ImageGallery items={images} slideDuration={50} showPlayButton={false}
+                            showIndex={true} startIndex={0} lazyLoad={true} />  </>
+                    }
+                </>
+            </>
+            }
             {!session && <>
-                <p>Login mate pleaaase :)</p>
+                    <p>Login mate pleaaase :) Error MSG {error}.</p>
             </>}
             </div>
         </Layout>)
@@ -37,6 +42,7 @@ export async function getServerSideProps(context) {
     const req = context.req
     const session = await getSession({ req })
     var files = []
+    var error = "Fine"
     var name = context.params.dataset
 
     if(session) {
@@ -44,30 +50,39 @@ export async function getServerSideProps(context) {
         // SOME SECURITY
         const FOLDER = process.env.IMAGES_FOLDER;
         var fs = require('fs');
-        var rawFileCSV = fs.readFileSync(`${FOLDER}${session.user.email}/${name}/images.csv`)
-        console.log(`CSV: ${FOLDER}${session.user.email}/${name}/images.csv`)
-        const parse = require('csv-parse/lib/sync')
-        const records = parse(rawFileCSV, {
-            columns: true,
-            skip_empty_lines: true
-        })
-        files = records.map(file =>
-            ({
-                original: `/api/images/${session.user.email}/${name}/${file['name']}_x1.png`,
-                thumbnail: `/api/images/${session.user.email}/${name}/${file['name']}_100x100.png`
+        try {
+            var rawFileCSV = fs.readFileSync(`${FOLDER}${session.user.email}/${name}/images.csv`)
+            console.log(`CSV: ${FOLDER}${session.user.email}/${name}/images.csv`)
+            const parse = require('csv-parse/lib/sync')
+            const records = parse(rawFileCSV, {
+                columns: true,
+                skip_empty_lines: true
             })
-        )
+            files = records.map(file =>
+                ({
+                    original: `/api/images/${session.user.email}/${name}/${file['name']}_x1.png`,
+                    thumbnail: `/api/images/${session.user.email}/${name}/${file['name']}_100x100.png`
+                })
+            )
+        } catch(err) {
+            error = "NOT_SUCH_FILE"
+            console.log(`Not such file error. ${err.message}`)
+        }
     } else {
+        error = "LOG_IN_ERROR"
         console.log('Not logged in..')
     }
-    console.log(`Dataset[images]:`)
-    files.forEach(file => {
-        console.log(file.original)
-    });
+    if(files.length > 0) {
+        console.log(`Dataset[images]:`)
+        files.forEach(file => {
+            console.log(file.original)
+        });
+    }
     return {
         props: {
             name : context.params.dataset,
-            images: files
+            images: files,
+            error: error
         }
     }
 }
