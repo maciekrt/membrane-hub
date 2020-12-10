@@ -2,14 +2,21 @@ import React from 'react'
 
 import Head from 'next/head'
 import Link from 'next/link'
+import { useState } from 'react'
 import Layout, { siteTitle } from '../../components/layout'
 import 'react-image-gallery/styles/css/image-gallery.css'
 import ImageGallery from 'react-image-gallery';
 
 import { useSession, getSession } from 'next-auth/client'
 
-export default function Dataset({ name, images, error }) {
+import { Dims } from '../../viewer_model/viewerModel'
+
+export default function Dataset({ name, levels, images, error }) {
     const [session, loading] = useSession()
+    var [idx, setIdx] = useState(0)
+    var [imIdx, setImIdx] = useState(0)
+    var labels = ['00','01']
+    
     return (
         <Layout>
             <Head>
@@ -22,10 +29,17 @@ export default function Dataset({ name, images, error }) {
             </div>
             <div>
             {session && <>
-                <p>Name is {name}. Error MSG {error}.</p>
+                <p>Name is {name}. Error MSG {error}. Current {labels[idx]} Levels: 
+                    <>
+                    { labels.map((elem, i) => 
+                        <button onClick={() => setIdx(i)}>{elem}</button>
+                    )
+                    }
+                    </>
+                </p>
                 <> 
                     { error=='Fine' && <>
-                        <ImageGallery items={images} slideDuration={50} showPlayButton={false}
+                        <ImageGallery items={images[idx]} slideDuration={50} showPlayButton={false}
                             showIndex={true} startIndex={0} lazyLoad={true} />  </>
                     }
                 </>
@@ -51,18 +65,22 @@ export async function getServerSideProps(context) {
         const FOLDER = process.env.IMAGES_FOLDER;
         var fs = require('fs');
         try {
-            var rawFileCSV = fs.readFileSync(`${FOLDER}${session.user.email}/${name}/images.csv`)
-            console.log(`CSV: ${FOLDER}${session.user.email}/${name}/images.csv`)
-            const parse = require('csv-parse/lib/sync')
-            const records = parse(rawFileCSV, {
-                columns: true,
-                skip_empty_lines: true
-            })
-            files = records.map(file =>
-                ({
-                    original: `/api/images/${session.user.email}/${name}/${file['name']}_x1.png`,
-                    thumbnail: `/api/images/${session.user.email}/${name}/${file['name']}_100x100.png`
+            files = ['00','01'].map( (elem, idx) => {
+                var rawFileCSV = fs.readFileSync(`${FOLDER}${session.user.email}/${name}/${elem}/images.csv`)
+                console.log(`CSV: ${FOLDER}${session.user.email}/${name}/${elem}/images.csv`)
+                const parse = require('csv-parse/lib/sync')
+                const records = parse(rawFileCSV, {
+                    columns: true,
+                    skip_empty_lines: true
                 })
+                var filesTemp = records.map(file =>
+                    ({
+                        original: `/api/images/${name}/${elem}/${file['name']}_x1.png`,
+                        thumbnail: `/api/images/${name}/${elem}/${file['name']}_100x100.png`
+                    })
+                )
+                return filesTemp
+            }
             )
         } catch(err) {
             error = "NOT_SUCH_FILE"
@@ -80,7 +98,8 @@ export async function getServerSideProps(context) {
     }
     return {
         props: {
-            name : context.params.dataset,
+            name : name,
+            levels: ['00','01'],
             images: files,
             error: error
         }

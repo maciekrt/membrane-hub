@@ -7,8 +7,6 @@ import { useRouter } from 'next/router'
 import Layout, { siteTitle } from '../components/layout'
 import ListDatasets from '../components/listDatasets'
 import utilStyles from '../styles/utils.module.css'
-import 'react-image-gallery/styles/css/image-gallery.css'
-import ImageGallery from 'react-image-gallery';
 
 import {
   signIn,
@@ -17,7 +15,7 @@ import {
   getSession
 } from 'next-auth/client'
 
-export default function Home({ images, dirs }) {
+export default function Home({ images, dirs, levels}) {
   const router = useRouter()
   const imageIdx = router.query.counter ? parseInt(router.query.counter) : 0
   const [session, loading] = useSession()
@@ -30,14 +28,7 @@ export default function Home({ images, dirs }) {
     // }, [])
     router.push(`/?counter=${idx}`, undefined, { shallow: true })
   }
-
-  // useEffect(() => {
-  //   // The counter changed!
-  // }, [router.query.counter])
-
-  // console.log(`What's the counter: ${router.query.counter}`)
-  // console.log(`Images: ${images[0].thumbnail} ${typeof (images[0].thumbnail)}`)
-
+  
   return (
     <Layout>
       <Head>
@@ -70,7 +61,7 @@ export default function Home({ images, dirs }) {
           </>}
           {session && 
             <> 
-              <ListDatasets dirs={dirs} />
+              <ListDatasets dirs={dirs} levels={levels}/>
             </>}
         </> 
       </div>
@@ -98,9 +89,11 @@ export async function getServerSideProps(context) {
       dirs = fs.readdirSync(`${FOLDER}${session.user.email}`);
       console.log(`Dirs: ${dirs}`)
     }
+    var levels = dirs.map((dir) => ['00','01'])
     return {
         props: {
           dirs: dirs,
+          levels: levels
         }
     }
 }
