@@ -1,21 +1,27 @@
 import React from 'react'
+import { useState } from 'react'
 
 import Head from 'next/head'
 import Link from 'next/link'
-import { useState } from 'react'
+import { useRouter } from 'next/router'
+import { useSession, getSession } from 'next-auth/client'
+
 import Layout, { siteTitle } from '../../components/layout'
 import 'react-image-gallery/styles/css/image-gallery.css'
 import ImageGallery from 'react-image-gallery';
-
-import { useSession, getSession } from 'next-auth/client'
 
 import { Dims } from '../../viewer_model/viewerModel'
 
 export default function Dataset({ name, levels, images, error }) {
     const [session, loading] = useSession()
     var [idx, setIdx] = useState(0)
-    var [imIdx, setImIdx] = useState(0)
+    const router = useRouter()
+    const curIdx = router.query.counter ? parseInt(router.query.counter) : 0
     var labels = ['00','01']
+
+    function ourOnSlide(cur) {
+        router.push(`/viewer/${name}/?counter=${cur}`, undefined, { shallow: true })
+    }
     
     return (
         <Layout>
@@ -29,7 +35,8 @@ export default function Dataset({ name, levels, images, error }) {
             </div>
             <div>
             {session && <>
-                <p>Name is {name}. Error MSG {error}. Current {labels[idx]} Levels: 
+                <p>{session.user.email} / {name} / {labels[idx]} </p>  
+                <p> Choose another channel: 
                     <>
                     { labels.map((elem, i) => 
                         <button onClick={() => setIdx(i)}>{elem}</button>
@@ -40,7 +47,7 @@ export default function Dataset({ name, levels, images, error }) {
                 <> 
                     { error=='Fine' && <>
                         <ImageGallery items={images[idx]} slideDuration={50} showPlayButton={false}
-                            showIndex={true} startIndex={0} lazyLoad={true} />  </>
+                            showIndex={true} startIndex={curIdx} lazyLoad={true} onSlide={ourOnSlide} />  </>
                     }
                 </>
             </>
