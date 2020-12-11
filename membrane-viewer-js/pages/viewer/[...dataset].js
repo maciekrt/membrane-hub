@@ -15,12 +15,28 @@ import { Dims } from '../../viewer_model/viewerModel'
 export default function Dataset({ name, levels, images, error }) {
     const [session, loading] = useSession()
     var [idx, setIdx] = useState(0)
+    var [masked, setMasked] = useState(0)
     const router = useRouter()
     const curIdx = router.query.counter ? parseInt(router.query.counter) : 0
     var labels = ['00','01']
 
     function ourOnSlide(cur) {
         router.push(`/viewer/${name}/?counter=${cur}`, undefined, { shallow: true })
+    }
+
+    function toggleChannel(elem, i) {
+        var add = " or "
+        if (i == 0) {
+            add = " "
+        }
+        return <>{add}<a onClick={() => setIdx(i)}>{elem}</a></>
+    }
+
+    function toggleMasked() {
+        if(masked == 0) {
+            return <><a onClick={() => setMasked(1)}>masked</a> / unmasked</>
+        }
+        return <>masked / <a onClick={() => setMasked(0)}>unmasked</a></>
     }
     
     return (
@@ -35,18 +51,11 @@ export default function Dataset({ name, levels, images, error }) {
             </div>
             <div>
             {session && <>
-                <p>{session.user.email} / {name} / {labels[idx]} </p>  
-                <p> Choose another channel: 
-                    <>
-                    { labels.map((elem, i) => 
-                        <button onClick={() => setIdx(i)}>{elem}</button>
-                    )
-                    }
-                    </>
-                </p>
+                <p>{session.user.email} / {name} / {labels[idx]}</p>
+                <p>[channel: <>{ labels.map(toggleChannel) }</>, {toggleMasked()}]</p>
                 <> 
                     { error=='Fine' && <>
-                        <ImageGallery items={images[idx]} slideDuration={50} showPlayButton={false}
+                        <ImageGallery items={images[idx][masked]} slideDuration={50} showPlayButton={false}
                             showIndex={true} startIndex={curIdx} lazyLoad={true} onSlide={ourOnSlide} />  </>
                     }
                 </>
@@ -80,12 +89,17 @@ export async function getServerSideProps(context) {
                     columns: true,
                     skip_empty_lines: true
                 })
-                var filesTemp = records.map(file =>
+                var filesTemp = [false, true].map((flag, j) => {
+                    var add = ""
+                    if(flag) {
+                        add = "_masked"
+                    }
+                    return records.map(file =>
                     ({
-                        original: `/api/images/${name}/${elem}/${file['name']}_x1.png`,
-                        thumbnail: `/api/images/${name}/${elem}/${file['name']}_100x100.png`
-                    })
-                )
+                        original: `/api/images/${name}/${elem}/${file['name']}${add}_x1.png`,
+                        thumbnail: `/api/images/${name}/${elem}/${file['name']}${add}_100x100.png`
+                    }))
+                })
                 return filesTemp
             }
             )
