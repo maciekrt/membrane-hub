@@ -1,7 +1,8 @@
-import React from 'react'
+import React, { useState } from 'react'
 
 // import { useEffect } from 'react'
 import Head from 'next/head'
+import Link from 'next/link'
 import { useRouter } from 'next/router'
 
 import Layout, { siteTitle } from '../components/layout'
@@ -35,24 +36,31 @@ export default function Home({ images, dirs, levels}) {
         <title>{siteTitle}</title>
       </Head>
       <div className={utilStyles.grid}>
-        <a href="https://nextjs.org/docs" className={utilStyles.card}>
-          <h3>Upload a file</h3>
-          <p>Uploading a nuclei image and the corresponding labelling.</p>
-        </a>
-        <>
+        {session && <> 
+        <Link href="/upload">
+          <a className={utilStyles.card}>
+            <h3>Upload a file</h3>
+            <p>Uploading a nuclei image and the corresponding labelling.</p>
+          </a>
+        </Link>
+        </>
+        }
         {!session &&
-          <a className={utilStyles.card} onClick={signIn} >
+          <Link href="/" >
+          <a className={utilStyles.card} onClick={signIn}>
             <h3>Log in</h3>
             <p>We are currently supporting log in using Google.</p>
           </a>
+          </Link>
         }
         {session &&
-          <a className={utilStyles.card} onClick={signOut}>
-          <h3>Log out</h3>
-          <p>You are logged in as {session.user.email}</p>
-          </a>
+          <Link href="/">
+            <a className={utilStyles.card} onClick={signOut}>
+              <h3>Log out</h3>
+              <p>You are logged in as {session.user.email}</p>
+            </a>
+          </Link>
         }  
-        </>
       </div>
       <div>
         <>
