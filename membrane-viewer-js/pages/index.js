@@ -88,8 +88,14 @@ export async function getServerSideProps(context) {
     if (session) {
       const FOLDER = process.env.IMAGES_FOLDER;
       var fs = require('fs');
-      dirs = fs.readdirSync(`${FOLDER}${session.user.email}`);
+      const baseDir = `${FOLDER}${session.user.email}/`
+      dirs = fs.readdirSync(baseDir);
+      dirs.sort(function(a, b) {
+        return fs.statSync(baseDir + b).mtime.getTime() -
+               fs.statSync(baseDir + a).mtime.getTime();
+    });
     }
+
     // This is hardcoded WOW!!
     var levels = dirs.map((dir) => ['00','01'])
     return {
