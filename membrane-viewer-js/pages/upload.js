@@ -8,7 +8,7 @@ import Layout, { siteTitle } from '../components/layout'
 
 export default function Dataset({ name, levels, images, error }) {
     const [session, loading] = useSession()
-    const [url, setUrl] = useState('Input a Google Drive link')
+    const [url, setUrl] = useState()
     const [flagGDrive, setFlagGDrive] = useState(true)
 
     const toggleFlagGDrive = (e) => {
@@ -48,13 +48,17 @@ export default function Dataset({ name, levels, images, error }) {
             <div>
                 {session && 
                     <div>
-                    <form>
-                    Link: <input id='url' value={url} onChange={e => setUrl(e.target.value)} />
+                    <form style={{marginTop: "60pt", marginBottom: "60pt"}}>
+                    <input id='url' onChange={e => setUrl(e.target.value)} style={{fontSize: "14pt", width: "800px"}} 
+                        placeholder="Please provide Google Drive share link"/>
                     {/* <input type="checkbox" id="scales" name="scales" value="GDrive toggle"
                             onChange={() => toggleFlagGDrive()} checked={flagGDrive} />
                     {flagGDrive && <p>Google Drive.</p> }
                     {!flagGDrive && <p>Random upload.</p>} */}
-                    <button type='submit' onClick={upload}>Upload</button>
+                    <p style={{fontSize: "0.7em"}}>
+                    Your data will be shared with logged-in users only.
+                    </p>
+                    <button type='submit' onClick={upload} style={{fontSize: "13pt", fontWeight: "bold"}}>Upload</button>
                     </form>
                     </div>
                 }
