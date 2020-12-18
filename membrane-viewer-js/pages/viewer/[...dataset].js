@@ -14,14 +14,15 @@ import { Dims } from '../../viewer_model/viewerModel'
 
 export default function Dataset({ name, levels, images, error }) {
     const [session, loading] = useSession()
-    var [idx, setIdx] = useState(0)
     var [masked, setMasked] = useState(0)
     const router = useRouter()
     const curIdx = router.query.counter ? parseInt(router.query.counter) : 0
+    const chIdx = router.query.ch_idx ? parseInt(router.query.ch_idx) : 0
     var labels = ['00','01']
 
     function ourOnSlide(cur) {
-        router.push(`/viewer/${name}/?counter=${cur}`, undefined, { shallow: true })
+        const chIdx = router.query.ch_idx ? parseInt(router.query.ch_idx) : 0
+        router.push(`/viewer/${name}/?counter=${cur}&ch_idx=${chIdx}`, undefined, { shallow: true })
     }
 
     function toggleChannel(elem, i) {
@@ -29,7 +30,8 @@ export default function Dataset({ name, levels, images, error }) {
         if (i == 0) {
             add = " "
         }
-        return <>{add}<a onClick={() => setIdx(i)}>{elem}</a></>
+        const cur = router.query.counter ? parseInt(router.query.counter) : 0
+        return <>{add}<a href={`/viewer/${name}/?counter=${cur}&ch_idx=${i}`}>{elem}</a></>
     }
 
     function toggleMasked() {
@@ -51,11 +53,11 @@ export default function Dataset({ name, levels, images, error }) {
             </div>
             <div>
             {session && <>
-                <p>{session.user.email} / {name} / {labels[idx]}</p>
+                <p>{session.user.email} / {name} / {labels[chIdx]}</p>
                 <p>[channel: <>{ labels.map(toggleChannel) }</>, {toggleMasked()}]</p>
                 <> 
                     { error=='Fine' && <>
-                        <ImageGallery items={images[idx][masked]} slideDuration={50} showPlayButton={false}
+                        <ImageGallery items={images[chIdx][masked]} slideDuration={50} showPlayButton={false}
                             showIndex={true} startIndex={curIdx} lazyLoad={true} onSlide={ourOnSlide} />  </>
                     }
                 </>
