@@ -84,19 +84,13 @@ export async function getServerSideProps(context) {
     // const posts = await res.json()
     const session = await getSession(context);
 
-    if(session) {
-      console.log(`Session[user]: ${session.user.email}`)
-    } else {
-      console.log(`No session..`)
-    }
-
     var dirs = []
     if (session) {
       const FOLDER = process.env.IMAGES_FOLDER;
       var fs = require('fs');
       dirs = fs.readdirSync(`${FOLDER}${session.user.email}`);
-      console.log(`Dirs: ${dirs}`)
     }
+    // This is hardcoded WOW!!
     var levels = dirs.map((dir) => ['00','01'])
     return {
         props: {

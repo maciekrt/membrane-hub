@@ -11,16 +11,16 @@ export default async function handler(req, res) {
     const axios = require('axios')
     // POST to the Flask Service pushing to the queue
     axios.post('http://localhost:5000/send', {
-            url: data['url']
+            url: data['url'],
+            gdrive: data['gdrive']
         })
-        .then(res => {
-            console.log(`statusCode: ${res.statusCode}`)
-            console.log(res)
+        .then(resUploadServer => {
+            console.log(`statusCode: ${resUploadServer.statusCode}`)
+            console.log(resUploadServer)
         })
         .catch(error => {
             console.error(error)
         })
-
     res.status(200)
     res.end()
 }
