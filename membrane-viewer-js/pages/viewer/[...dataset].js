@@ -12,17 +12,17 @@ import ImageGallery from 'react-image-gallery';
 
 import { Dims } from '../../viewer_model/viewerModel'
 
-export default function Dataset({ name, levels, images, error }) {
+export default function Dataset({ name, levels, galleryImages, error }) {
     const [session, loading] = useSession()
     var [masked, setMasked] = useState(0)
     const router = useRouter()
-    const curIdx = router.query.counter ? parseInt(router.query.counter) : 0
+    const imgIdx = router.query.img_idx ? parseInt(router.query.img_idx) : 0
     const chIdx = router.query.ch_idx ? parseInt(router.query.ch_idx) : 0
     var labels = ['00','01']
 
     function ourOnSlide(cur) {
         const chIdx = router.query.ch_idx ? parseInt(router.query.ch_idx) : 0
-        router.push(`/viewer/${name}/?counter=${cur}&ch_idx=${chIdx}`, undefined, { shallow: true })
+        router.push(`/viewer/${name}/?img_idx=${cur}&ch_idx=${chIdx}`, undefined, { shallow: true })
     }
 
     function toggleChannel(elem, i) {
@@ -30,8 +30,11 @@ export default function Dataset({ name, levels, images, error }) {
         if (i == 0) {
             add = " "
         }
-        const cur = router.query.counter ? parseInt(router.query.counter) : 0
-        return <>{add}<a href={`/viewer/${name}/?counter=${cur}&ch_idx=${i}`}>{elem}</a></>
+        const cur = router.query.img_idx ? parseInt(router.query.img_idx) : 0
+        return <>
+            {add}
+            <a href={`/viewer/${name}/?img_idx=${cur}&ch_idx=${i}`}>{elem}</a>
+            </>
     }
 
     function toggleMasked() {
@@ -57,8 +60,8 @@ export default function Dataset({ name, levels, images, error }) {
                 <p>[channel: <>{ labels.map(toggleChannel) }</>, {toggleMasked()}]</p>
                 <> 
                     { error=='Fine' && <>
-                        <ImageGallery items={images[chIdx][masked]} slideDuration={50} showPlayButton={false}
-                            showIndex={true} startIndex={curIdx} lazyLoad={true} onSlide={ourOnSlide} />  </>
+                        <ImageGallery items={galleryImages[chIdx][masked]} slideDuration={50} showPlayButton={false}
+                            showIndex={true} startIndex={imgIdx} lazyLoad={true} onSlide={ourOnSlide} />  </>
                     }
                 </>
             </>
@@ -68,6 +71,11 @@ export default function Dataset({ name, levels, images, error }) {
             </>}
             </div>
         </Layout>)
+}
+
+// PAD 2
+function pad(num) {
+    return ("00" + num).slice(-2) 
 }
 
 export async function getServerSideProps(context) {
@@ -83,27 +91,24 @@ export async function getServerSideProps(context) {
         const FOLDER = process.env.IMAGES_FOLDER;
         var fs = require('fs');
         try {
-            files = ['00','01'].map( (elem, idx) => {
-                var rawFileCSV = fs.readFileSync(`${FOLDER}${session.user.email}/${name}/${elem}/images.csv`)
-                console.log(`CSV: ${FOLDER}${session.user.email}/${name}/${elem}/images.csv`)
-                const parse = require('csv-parse/lib/sync')
-                const records = parse(rawFileCSV, {
-                    columns: true,
-                    skip_empty_lines: true
-                })
-                var filesTemp = [false, true].map((flag, j) => {
-                    var add = ""
-                    if(flag) {
-                        add = "_masked"
-                    }
-                    return records.map(file =>
-                    ({
-                        original: `/api/images/${name}/${elem}/${file['name']}${add}_x1.png`,
-                        thumbnail: `/api/images/${name}/${elem}/${file['name']}${add}_100x100.png`
-                    }))
-                })
-                return filesTemp
-            }
+                const metadataFile = fs.readFileSync(`${FOLDER}${session.user.email}/${name}/metadata.json`)
+                const metadata = JSON.parse(metadataFile)
+                files = ['00','01'].map( (elem, idxChannels) => {
+                    console.log(`Metadata: ${metadata}`)
+                    var filesTemp = [false, true].map((flag, idxMask) => {
+                        var add = ""
+                        if(flag) {
+                            add = "_masked"
+                        }
+                        console.log(metadata.z, `/api/images/${name}/${elem}/${pad(0)}${add}_x1.png`)
+                        var arr = [...(new Array(parseInt(metadata.z)))].map((sth, idx) => ({
+                            original: `/api/images/${name}/${elem}/${pad(idx)}${add}_x1.png`,
+                            thumbnail: `/api/images/${name}/${elem}/${pad(idx)}${add}_100x100.png`
+                        }))
+                        return arr
+                    })
+                    return filesTemp
+                }
             )
         } catch(err) {
             error = "NOT_SUCH_FILE"
@@ -113,18 +118,20 @@ export async function getServerSideProps(context) {
         error = "LOG_IN_ERROR"
         console.log('Not logged in..')
     }
-    if(files.length > 0) {
-        console.log(`Dataset[images]:`)
-        files.forEach(file => {
-            console.log(file.original)
-        });
-    }
     return {
         props: {
             name : name,
             levels: ['00','01'],
-            images: files,
+            galleryImages: files,
             error: error
         }
     }
 }
+
+                    // var rawFileCSV = fs.readFileSync(`${FOLDER}${session.user.email}/${name}/${elem}/images.csv`)
+                    // console.log(`CSV: ${FOLDER}${session.user.email}/${name}/${elem}/images.csv`)
+                    // const parse = require('csv-parse/lib/sync')
+                    // const records = parse(rawFileCSV, {
+                    //     columns: true,
+                    //     skip_empty_lines: true
+                    // })

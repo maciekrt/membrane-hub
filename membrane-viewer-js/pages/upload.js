@@ -18,6 +18,7 @@ export default function Dataset({ name, levels, images, error }) {
     const upload = async (e) => {
         e.preventDefault()
         try {
+            console.log(`Upload: ${session.user.email}`)
             const res = await fetch('api/upload', {
                 method: 'post',
                 headers: {
@@ -25,15 +26,10 @@ export default function Dataset({ name, levels, images, error }) {
                 },
                 body: JSON.stringify({
                     gdrive: flagGDrive,
-                    url: url
+                    url: url,
+                    email: session.user.email
                 })
             })
-
-            if (res.status === 200) {
-                alert('You uploaded!')
-            } else {
-                alert('Sorry, something went wrong.')
-            }
         } catch (err) {
             alert(err)
         }
@@ -53,13 +49,13 @@ export default function Dataset({ name, levels, images, error }) {
                 {session && 
                     <div>
                     <form>
-                    <input id='url' value={url} onChange={e => setUrl(e.target.value)} />
-                    <input type="checkbox" id="scales" name="scales" value="GDrive toggle"
+                    Link: <input id='url' value={url} onChange={e => setUrl(e.target.value)} />
+                    {/* <input type="checkbox" id="scales" name="scales" value="GDrive toggle"
                             onChange={() => toggleFlagGDrive()} checked={flagGDrive} />
                     {flagGDrive && <p>Google Drive.</p> }
-                    {!flagGDrive && <p>Random upload.</p>}
+                    {!flagGDrive && <p>Random upload.</p>} */}
                     <button type='submit' onClick={upload}>Upload</button>
-                </form>
+                    </form>
                     </div>
                 }
                 {!session && <>

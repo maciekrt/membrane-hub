@@ -12,7 +12,8 @@ export default async function handler(req, res) {
     // POST to the Flask Service pushing to the queue
     axios.post('http://localhost:5000/send', {
             url: data['url'],
-            gdrive: data['gdrive']
+            gdrive: data['gdrive'],
+            email: data['email']
         })
         .then(resUploadServer => {
             console.log(`statusCode: ${resUploadServer.statusCode}`)

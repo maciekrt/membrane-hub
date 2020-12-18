@@ -34,3 +34,16 @@
     font-weight: bold;
     color: #009879;
 }
+
+.row {
+  display: flex;
+}
+
+.column {
+  flex: 33.33%;
+  padding: 3px;
+}
+
+.caption {
+    font-size: 10px;
+}

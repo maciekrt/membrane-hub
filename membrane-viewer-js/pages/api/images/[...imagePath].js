@@ -15,11 +15,16 @@ export default async function handler(req, res) {
         var name = imagePath.join('/');
 
         var fs = require('fs')
-        var buffer = fs.readFileSync(`${FOLDER}${session.user.email}/${name}`);
-        // console.log(`len: ${buffer && buffer.length}`)
-        res.setHeader('Cache-Control', 'public, must-revalidate, max-age=3155760');
-        res.setHeader('Content-Type', 'image/png')
-        res.status(200).send(buffer)
+        try {
+            var buffer = fs.readFileSync(`${FOLDER}${session.user.email}/${name}`);
+            res.setHeader('Cache-Control', 'public, must-revalidate, max-age=3155760');
+            res.setHeader('Content-Type', 'image/png')
+            res.status(200).send(buffer)
+        } catch (err) {
+            error = "NOT_SUCH_FILE"
+            console.log(`Not such a LOADING IMAGE ${err.message}`)
+            res.status(404)
+        }
         res.end(null)
     } else {
         // console.log("You might be not on a security whitelist.")
