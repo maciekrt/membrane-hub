@@ -2,8 +2,8 @@ import Head from 'next/head'
 import styles from './layout.module.css'
 import Link from 'next/link'
 
-export const siteTitle = 'Membrane Viewer'
-export const siteDescription = 'Membrane Viewer description'
+export const siteTitle = 'Membrane Hub'
+export const siteDescription = 'Membrane Hub'
 
 export default function Layout({children}) {
   return (
@@ -23,10 +23,10 @@ export default function Layout({children}) {
 
       <header className={styles.header}>
         <h1 className={styles.title}>
-          Welcome to Membrane Viewer
+          Membrane Hub
         </h1>
         <p className={styles.description}>
-          To infinity and beyond! - Buzz Lightyear
+          To infinity and beyond! - Buzz Lightyear 🚀
         </p>
       </header>
 

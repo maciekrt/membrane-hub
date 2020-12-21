@@ -6,7 +6,7 @@ const securityWhitelist = ['m.zdanowicz@gmail.com', 'grzegorz.kossakowski@gmail.
 
 export default async function handler(req, res) {
     const session = await getSession({ req }) 
-    if(session && securityWhitelist.includes(session.user.email) ) {
+    if(session) {
         // console.log('Security whitelist contains your email.')
         const {
             query: { imagePath },

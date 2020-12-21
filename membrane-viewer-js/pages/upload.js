@@ -6,6 +6,8 @@ import Link from 'next/link'
 import { useSession, getSession } from 'next-auth/client'
 import Layout, { siteTitle } from '../components/layout'
 
+import { useRouter } from 'next/router'
+
 export default function Dataset({ name, levels, images, error }) {
     const [session, loading] = useSession()
     const [url, setUrl] = useState()
@@ -14,6 +16,8 @@ export default function Dataset({ name, levels, images, error }) {
     const toggleFlagGDrive = (e) => {
         setFlagGDrive(!flagGDrive)
     }
+
+    const router = useRouter()
 
     const upload = async (e) => {
         e.preventDefault()
@@ -29,7 +33,7 @@ export default function Dataset({ name, levels, images, error }) {
                     url: url,
                     email: session.user.email
                 })
-            })
+            }).then(() => router.push("/"))
         } catch (err) {
             alert(err)
         }
@@ -63,7 +67,7 @@ export default function Dataset({ name, levels, images, error }) {
                     </div>
                 }
                 {!session && <>
-                    <p>Login mate pleaaase :) Error MSG {error}.</p>
+                    <p>Login please. Error MSG {error}.</p>
                 </>}
             </div>
         </Layout>)

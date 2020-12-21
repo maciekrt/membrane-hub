@@ -1,34 +1,43 @@
 import Link from 'next/link'
 import styles from './listDatasets.module.css'
 
-export default function ListDatasets({ dirs, levels }) {
-    const channelsIntoLabels = {'00': 'Chromosome 1', '01': 'Nucleus'};
+import { pad } from '../logic/auxiliary'
+
+
+export default function ListDatasets({ datasets }) {
+
+    function ThumbnailsList({ elem }) {
+        return ( <>
+        {
+            [...Array(parseInt(elem.metadata.channels))].map((_, level) => <>
+                <Link href={`viewer/${elem.imagename}?img_idx=${Math.floor(elem.metadata.z / 2)}&ch_idx=${level}`}><a>
+                    <div className={styles.column}>
+                        <img src={`/api/images/${elem.imagename}/${pad(level, 2)}/${Math.floor(elem.metadata.z / 2)}_100x100.png`} />
+                        <figcaption className={styles.caption}>{level + 1}</figcaption>
+                    </div></a>
+                </Link></>
+            )
+        }
+        </>)
+    }
 
     return ( 
         <table className={styles.styleTable}>
             <thead>
                 <tr>
                     <th>Dataset name</th>
-                    <th>Levels</th>
+                    <th>Channels</th>
                 </tr>
             </thead>
             <tbody>
-            <> { dirs.map((elem, idx) => (
+            <> { datasets.map((elem, idx) => (
             <tr>
-                <td><Link href={`/viewer/${elem}`}>
-                    <a>{elem}</a>
-                    </Link></td>
+                <td><Link href={`/viewer/${elem.imagename}`}>
+                    <a>{elem.imagename}</a>
+                    </Link>
+                </td>
                 <td><div className={styles.row}>
-                    {
-                    levels[idx].map((level, idLevel) => <>
-                    <Link href={`viewer/${elem}?img_idx=20&ch_idx=${idLevel}`}><a>
-                        <div className={styles.column}>
-                            <img src={`/api/images/${elem}/${level}/20_100x100.png`} />
-                            <figcaption className={styles.caption}>{channelsIntoLabels[level]}</figcaption>
-                        </div></a>
-                    </Link></>
-                     )
-                    }
+                    <ThumbnailsList elem={elem} />
                 </div></td>
             </tr>))
             } 

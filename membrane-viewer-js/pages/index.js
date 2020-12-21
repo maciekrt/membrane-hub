@@ -8,6 +8,7 @@ import { useRouter } from 'next/router'
 import Layout, { siteTitle } from '../components/layout'
 import ListDatasets from '../components/listDatasets'
 import utilStyles from '../styles/utils.module.css'
+import { processDatasets } from '../logic/serverDatasets'
 
 import {
   signIn,
@@ -16,7 +17,7 @@ import {
   getSession
 } from 'next-auth/client'
 
-export default function Home({ images, dirs, levels}) {
+export default function Home({ datasets, error}) {
   const router = useRouter()
   const imageIdx = router.query.counter ? parseInt(router.query.counter) : 0
   const [session, loading] = useSession()
@@ -65,13 +66,13 @@ export default function Home({ images, dirs, levels}) {
       <div>
         <>
           {!session && <>
-            No images visible here..
+            No images visible here.. {error}
           </>}
-          {session && 
-            <> 
-              <ListDatasets dirs={dirs} levels={levels}/>
-            </>}
-        </> 
+          {session && <>
+            <ListDatasets datasets={datasets}/> 
+            </>
+          } 
+        </>
       </div>
     </Layout>
   )
@@ -80,28 +81,32 @@ export default function Home({ images, dirs, levels}) {
 export async function getServerSideProps(context) {
     // Call an external API endpoint to get posts.
     // You can use any data fetching library
-    // const res = await fetch('https://.../posts')
-    // const posts = await res.json()
     const session = await getSession(context);
-
-    var dirs = []
-    if (session) {
-      const FOLDER = process.env.IMAGES_FOLDER;
-      var fs = require('fs');
-      const baseDir = `${FOLDER}${session.user.email}/`
-      dirs = fs.readdirSync(baseDir);
-      dirs.sort(function(a, b) {
-        return fs.statSync(baseDir + b).mtime.getTime() -
-               fs.statSync(baseDir + a).mtime.getTime();
-    });
-    }
-
-    // This is hardcoded WOW!!
-    var levels = dirs.map((dir) => ['00','01'])
-    return {
-        props: {
-          dirs: dirs,
-          levels: levels
+    if(session) {
+      console.log(`index.js: Working on datasets of ${session.user.email}`)
+      try {
+        var res = processDatasets(session.user.email)
+        console.log(`index.js[session]: ${session.user.email}`)
+        return {
+          props: {
+            datasets: res['datasets'],
+            error: "OK"
+          }
         }
+      } catch(err) {
+        console.log(`index.js[session]: Processing did not work.`)
+        return {
+          props: {
+            datasets: null,
+            error: "Processing did not work"
+          }
+        }
+      }
+    }
+    return {
+      props: {
+        datasets: null,
+        error: "No session"
+      }
     }
 }
