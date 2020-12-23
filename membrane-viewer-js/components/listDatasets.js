@@ -1,48 +1,65 @@
 import Link from 'next/link'
 import styles from './listDatasets.module.css'
 
+import { useSession, getSession } from 'next-auth/client'
+
 import { pad } from '../logic/auxiliary'
 
-
 export default function ListDatasets({ datasets }) {
+   const [session, loading] = useSession()
 
-    function ThumbnailsList({ elem }) {
-        return ( <>
-        {
+   function ThumbnailsList({ elem }) {
+      return (<>
+         { elem.metadata.active == true &&
             [...Array(parseInt(elem.metadata.channels))].map((_, level) => <>
-                <Link href={`viewer/${elem.imagename}?img_idx=${Math.floor(elem.metadata.z / 2)}&ch_idx=${level}`}><a>
-                    <div className={styles.column}>
-                        <img src={`/api/images/${elem.imagename}/${pad(level, 2)}/${Math.floor(elem.metadata.z / 2)}_100x100.png`} />
-                        <figcaption className={styles.caption}>{level + 1}</figcaption>
-                    </div></a>
-                </Link></>
-            )
-        }
-        </>)
-    }
+               <Link href={`viewer/${session.user.email}/${elem.imagename}?img_idx=${Math.floor(elem.metadata.z / 2)}&ch_idx=${level}`}><a>
+                  <div className={styles.column}>
+                     <img src={`/api/images/${session.user.email}/${elem.imagename}/${level}/${Math.floor(elem.metadata.z / 2)}_100x100.png`} />
+                     <figcaption className={styles.caption}>{level + 1}</figcaption>
+                  </div></a>
+               </Link></>
+            )}
+         { elem.metadata.active === false && <>Waiting..</>}
+      </>)
+   }
 
-    return ( 
-        <table className={styles.styleTable}>
-            <thead>
-                <tr>
-                    <th>Dataset name</th>
-                    <th>Channels</th>
-                </tr>
-            </thead>
-            <tbody>
-            <> { datasets.map((elem, idx) => (
+   return (
+      <table className={styles.styleTable}>
+         <thead>
             <tr>
-                <td><Link href={`/viewer/${elem.imagename}`}>
-                    <a>{elem.imagename}</a>
-                    </Link>
-                </td>
-                <td><div className={styles.row}>
-                    <ThumbnailsList elem={elem} />
-                </div></td>
-            </tr>))
-            } 
+               <th>Dataset name</th>
+               <th>Ready</th>
+               <th>Channels</th>
+            </tr>
+         </thead>
+         <tbody>
+            <> {datasets.map((elem, idx) => (
+               <tr>
+                  <td>{elem.metadata.active == true &&
+                     <Link href={`/viewer/${session.user.email}/${elem.imagename}`}>
+                        <a>{elem.imagename}</a>
+                     </Link>
+                  }
+                     {elem.metadata.active == false &&
+                        <>{elem.imagename}</>
+                     }
+                  </td>
+                  <td>
+                     {String(elem.metadata.active)}
+                  </td>
+                  <td>{elem.metadata.active === true &&
+                     <div className={styles.row}>
+                        <ThumbnailsList elem={elem} />
+                     </div>
+                  }
+                     {elem.metadata.active === false &&
+                        <>Waiting..</>
+                     }
+                  </td>
+               </tr>))
+            }
             </>
-            </tbody>
-        </table>
-    )
+         </tbody>
+      </table>
+   )
 }

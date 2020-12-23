@@ -13,15 +13,21 @@ export default async function handler(req, res) {
         } = req;
         const FOLDER = process.env.IMAGES_FOLDER;
         var name = imagePath.join('/');
+        const domainMe = session.user.email.split("@")[1]
+        const domainLink = imagePath[0].split("@")[1]
 
         var fs = require('fs')
         try {
-            var buffer = fs.readFileSync(`${FOLDER}${session.user.email}/${name}`);
+            if (domainMe != domainLink) {
+                throw new Error("wrong domains")
+            } else {
+                console.log("Image: same domains - OK.")
+            }
+            var buffer = fs.readFileSync(`${FOLDER}${name}`);
             res.setHeader('Cache-Control', 'public, must-revalidate, max-age=3155760');
             res.setHeader('Content-Type', 'image/png')
             res.status(200).send(buffer)
         } catch (err) {
-            error = "NOT_SUCH_FILE"
             console.log(`Not such a LOADING IMAGE ${err.message}`)
             res.status(404)
         }

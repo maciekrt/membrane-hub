@@ -33,7 +33,7 @@ export default function Dataset({ name, levels, images, error }) {
                     url: url,
                     email: session.user.email
                 })
-            }).then(() => router.push("/"))
+            }).then(() => router.push("/?image_loading=1"))
         } catch (err) {
             alert(err)
         }
@@ -50,25 +50,37 @@ export default function Dataset({ name, levels, images, error }) {
                 </Link>
             </div>
             <div>
-                {session && 
+                {session &&
                     <div>
-                    <form style={{marginTop: "60pt", marginBottom: "60pt"}}>
-                    <input id='url' onChange={e => setUrl(e.target.value)} style={{fontSize: "14pt", width: "800px"}} 
-                        placeholder="Please provide Google Drive share link"/>
-                    {/* <input type="checkbox" id="scales" name="scales" value="GDrive toggle"
+                        <form style={{ marginTop: "60pt", marginBottom: "60pt" }}>
+                            <input id='url' onChange={e => setUrl(e.target.value)} className="textField"
+                                placeholder="Please provide Google Drive share link" />
+                            {/* <input type="checkbox" id="scales" name="scales" value="GDrive toggle"
                             onChange={() => toggleFlagGDrive()} checked={flagGDrive} />
                     {flagGDrive && <p>Google Drive.</p> }
                     {!flagGDrive && <p>Random upload.</p>} */}
-                    <p style={{fontSize: "0.7em"}}>
-                    Your data will be shared with logged-in users only.
-                    </p>
-                    <button type='submit' onClick={upload} style={{fontSize: "13pt", fontWeight: "bold"}}>Upload</button>
-                    </form>
+                            <p className="message">
+                                Your data will be shared with logged-in users only.
+                            </p>
+                            <button type='submit' onClick={upload} className="buttonUpload">Upload</button>
+                        </form>
                     </div>
                 }
                 {!session && <>
                     <p>Login please. Error MSG {error}.</p>
                 </>}
+                <style jsx>{`
+                    .textField {
+                        font-size: 14pt;
+                        width: 800px;
+                    }
+                    .message {
+                        font-size: 0.7em
+                    }
+                    .buttonUpload {
+                        font-size: 14pt;
+                        font-weight: bold
+                    }`}</style>
             </div>
         </Layout>)
 }

@@ -11,17 +11,18 @@ import 'react-image-gallery/styles/css/image-gallery.css'
 import ImageGallery from 'react-image-gallery';
 import { processImages } from '../../logic/serverImages'
 
-export default function Dataset({ error, metadata, images }) {
+export default function Dataset({ name, file, error, metadata, images }) {
     const [session, loading] = useSession()
     var [masked, setMasked] = useState(0)
     const router = useRouter()
     const { dataset } = router.query
     const imgIdx = router.query.img_idx ? parseInt(router.query.img_idx) : 0
     const chIdx = router.query.ch_idx ? parseInt(router.query.ch_idx) : 0
+
     
     function ourOnSlide(cur) {
         const chIdx = router.query.ch_idx ? parseInt(router.query.ch_idx) : 0
-        router.push(`/viewer/${dataset}/?img_idx=${cur}&ch_idx=${chIdx}`, undefined, { shallow: true })
+        router.push(`/viewer/${name}/${file}/?img_idx=${cur}&ch_idx=${chIdx}`, undefined, { shallow: true })
     }
 
     function ToggleChannel() {
@@ -35,7 +36,7 @@ export default function Dataset({ error, metadata, images }) {
                         add = " "
                     }
                     return <> {add} 
-                        <a href={`/viewer/${dataset}/?img_idx=${cur}&ch_idx=${i}`}>
+                        <a href={`/viewer/${name}/${file}/?img_idx=${cur}&ch_idx=${i}`}>
                             {i + 1}
                         </a>
                     </>
@@ -45,7 +46,7 @@ export default function Dataset({ error, metadata, images }) {
     }
 
     function ToggleMasked() {
-        return (<> { metadata.masked === 'True' &&
+        return (<> { metadata.masked === true &&
             <>  
             <> | </>
             { masked == 1 && <>masked / <a onClick={() => setMasked(0)}>unmasked</a></> }
@@ -53,19 +54,6 @@ export default function Dataset({ error, metadata, images }) {
             </> 
         }</>
         )
-        
-        
-        // ({ metadata.masked === 'True' &&
-        //     <>
-        //         {<> Mask: <>{ () => {
-        //             if(masked) {
-        //                 return <>masked / <a onClick={() => setMasked(0)}>unmasked</a></>
-        //             } else {
-        //                 return <><a onClick={() => setMasked(1)}>masked</a> / unmasked</>
-        //             }}
-        //         } </>}
-        //     </> 
-        // } </>)
     }
     
     return (
@@ -79,24 +67,24 @@ export default function Dataset({ error, metadata, images }) {
                 </Link>
             </div>
             <div>
-            {session && 
+            {session &&  
             <>
-                <p>{session.user.email} / {dataset} / {chIdx + 1}</p>
-                <p>
-                    <ToggleChannel />
-                    <ToggleMasked />
-                </p>
-                <> 
-                    { error == 'OK' && <>
-                        <ImageGallery items={images[chIdx][masked]} slideDuration={50} showPlayButton={false}
-                            showIndex={true} startIndex={imgIdx} lazyLoad={true} onSlide={ourOnSlide} />  </>
-                    }
-                </> 
+                { error == 'OK' && <>
+                    <p>{name} / {file} / {chIdx + 1} </p>
+                    {name != session.user.email && <p>Shared with {session.user.email}</p>}
+                    <p> 
+                        { metadata.active === true && <>Active | </> }
+                        <ToggleChannel />
+                        <ToggleMasked />
+                    </p>
+                    <ImageGallery items={images[chIdx][masked]} slideDuration={50} 
+                        showPlayButton={false} showIndex={true} 
+                        startIndex={imgIdx} lazyLoad={true} onSlide={ourOnSlide} /> 
+                </> } 
+                { error != 'OK' && <><p>{error}</p> </> }
             </>
             }
-            {!session && <>
-                    <p>Login mate pleaaase :) Error MSG {error}.</p>
-            </>}
+            {!session && <><p>Login mate pleaaase :) Error MSG {error}.</p></>}
             </div>
         </Layout>)
 }
@@ -106,13 +94,25 @@ export async function getServerSideProps(context) {
     const session = await getSession({ req })
     var name = context.params.dataset
 
+    console.log(`Dataset: ${name.join('/')} TUTAJ ${name[0]} ${name[1]}`)
+
     if(session) {
         console.log(`Viewer: ${session.user.email} ${name}`)
+        const domainMe = session.user.email.split("@")[1]
+        const domainLink = name[0].split("@")[1]
+
         try {
-            const imagesJSON = processImages(session.user.email, name)
+            if (domainMe != domainLink) {
+                throw new Error("wrong domains")
+            } else {
+                console.log("Dataset: same domains - OK.")
+            }
+            const imagesJSON = processImages(session.user.email, name.join('/'))
             console.log(`viewer: Success.`)
             return {
                 props: {
+                    name: name[0],
+                    file: name[1],
                     error: "OK",
                     metadata: imagesJSON['metadata'],
                     images: imagesJSON['images']
@@ -120,18 +120,10 @@ export async function getServerSideProps(context) {
             }
         } catch(err) {
             console.log(`Not such file error. ${err.message}`)
-            return {
-                props: {
-                    error: "Not such a file",
-                }
-            }
+            return { props: { error: "Not such a file" } }
         }
     } else {
         console.log('Not logged in..')
-        return {
-            props: {
-                error: "Not logged in"
-            }
-        }
+        return { props: { error: "Not logged in" } }
     }
 }

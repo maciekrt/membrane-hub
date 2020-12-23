@@ -17,10 +17,10 @@ export default async function handler(req, res) {
             res.status(200).json(result)
         } catch (err) {
             console.log(`api/datasets: Processing error (${err}).`)
-            res.status(403).json({ error: "api/datasets: processing error" })
+            res.status(401).json({ error: "api/datasets: processing error" })
         }
     } else {
         console.log("api/datasets: Session error.")
-        res.status(404).json({ error: "api/datasets: session error" })
+        res.status(403).json({ error: "api/datasets: session error" })
     }
 }
