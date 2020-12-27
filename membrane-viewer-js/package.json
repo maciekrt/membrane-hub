@@ -22,7 +22,8 @@
     "react-dom": "16.13.1",
     "react-image-gallery": "^1.0.8",
     "react-toastify": "^6.2.0",
-    "sqlite3": "^5.0.0"
+    "sqlite3": "^5.0.0",
+    "swr": "^0.3.11"
   },
   "devDependencies": {
     "jimp": "^0.16.1",

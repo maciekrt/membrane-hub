@@ -1,7 +1,9 @@
 
 export function processDatasets(email) {
    /* Returns a JSON:
-   { datasets: {
+   {  
+      error: ...
+      datasets: {
       [{ filename: "...", metadata: { ... } }, ...] }
    }*/
    const FOLDER = process.env.IMAGES_FOLDER

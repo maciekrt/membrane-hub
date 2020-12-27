@@ -8,7 +8,6 @@ import { useRouter } from 'next/router'
 import Layout, { siteTitle } from '../components/layout'
 import ListDatasets from '../components/listDatasets'
 import utilStyles from '../styles/utils.module.css'
-import { processDatasets } from '../logic/serverDatasets'
 
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -17,7 +16,6 @@ import {
   signIn,
   signOut,
   useSession,
-  getSession
 } from 'next-auth/client'
 
 function Messaging() {
@@ -49,9 +47,18 @@ function Messaging() {
   )
 }
 
-export default function Home({ datasets, error }) {
-  const router = useRouter()
+import useSWR from 'swr'
+
+const fetcher = (url) => fetch(url)
+  .then(res => res.json())
+  .then(data => { console.log(`fetcher[data]: ${JSON.stringify(data)}`); return data})
+
+export default function Home() {
   const [session, loading] = useSession()
+
+  const { data , error } = session ? useSWR(`/api/datasets/${session.user.email}`, fetcher, { refreshInterval: 2000 }) : { data: undefined, error: undefined }
+
+  const datasets = data?.datasets
 
   return (
     <Layout>
@@ -87,50 +94,19 @@ export default function Home({ datasets, error }) {
         }
       </div>
       <div>
-        <>
-          {!session && <>
-            No images visible here.. {error}
-          </>}
-          {session && <>
-            <ListDatasets datasets={datasets} />
-          </>
-          }
-        </>
+        <RenderUserDatasets loggedIn={!!session?.user} datasets={datasets}/>
       </div>
+      { error && <><p class="error">{error}</p></>}
     </Layout>
   )
 }
 
-export async function getServerSideProps(context) {
-  // Call an external API endpoint to get posts.
-  // You can use any data fetching library
-  const session = await getSession(context);
-  if (session) {
-    console.log(`index.js: Working on datasets of ${session.user.email}`)
-    try {
-      var res = processDatasets(session.user.email)
-      console.log(`index.js[session]: ${session.user.email}`)
-      console.log(`index.js[res]: ${JSON.stringify(res)}`)
-      return {
-        props: {
-          datasets: res['datasets'],
-          error: "OK"
-        }
-      }
-    } catch (err) {
-      console.log(`index.js: Processing did not work.`)
-      return {
-        props: {
-          datasets: null,
-          error: "Processing did not work"
-        }
-      }
-    }
-  }
-  return {
-    props: {
-      datasets: null,
-      error: "No session"
-    }
-  }
+function RenderUserDatasets({loggedIn, datasets}) {
+  if (!loggedIn)
+    return <p>No images visible here..</p>
+  else
+    if (datasets)
+      return <ListDatasets datasets={datasets} />
+    else
+      return <p>Loading datasets...</p>
 }
