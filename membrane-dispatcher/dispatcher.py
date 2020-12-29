@@ -9,6 +9,7 @@ import json
 import hashlib
 from pathlib import Path
 import shutil
+from segmentation import run_segmentation
 
 from flask import Flask, request, jsonify
 app = Flask(__name__)
@@ -55,6 +56,9 @@ def finalize(path):
     print(f"finalize: {path}")
     shutil.rmtree(str(path), ignore_errors=True)
 
+def trigger_segmentation():
+    run_segmentation.main()
+
 # https://www.twilio.com/blog/first-task-rq-redis-python
 
 
@@ -86,6 +90,23 @@ def send():
             depends_on=jobRenderer
         )
     return jsonify({'feedback': 'SUCCESS :)'})
+
+@app.route('/segmentation',  methods=['POST'])
+def segmentation():
+    if request.method == 'POST':
+        content = request.json
+        print('Schedule jupyter notebook run')
+        notebook_path = '/home/ubuntu/Projects/dispatcherMembrane/segmentation/run_quick.ipynb'
+        basedir_out='/home/ubuntu/tmp/'
+        input_file_path = '/home/ubuntu/Projects/data/uploads/grzegorz.kossakowski@gmail.com/FISH1_BDNF488_1_cLTP_3_CA.czi'
+        jobDownload = queueDispatcher.enqueue(
+            run_segmentation.main,
+            notebook_path,
+            basedir_out,
+            input_file_path,
+        )
+        
+    return jsonify({'result': 'SCHEDULED'})
 
 
 @app.route('/')
