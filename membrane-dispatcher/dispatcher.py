@@ -91,12 +91,16 @@ def send():
         )
     return jsonify({'feedback': 'SUCCESS :)'})
 
+# try with:
+# curl -d '{"notebook_file_name": "run_quick.ipynb"}' -H 'Content-Type: application/json' localhost:5000/segmentation
 @app.route('/segmentation',  methods=['POST'])
 def segmentation():
     if request.method == 'POST':
         content = request.json
-        print('Schedule jupyter notebook run')
-        notebook_path = '/home/ubuntu/Projects/dispatcherMembrane/segmentation/run_quick.ipynb'
+        notebook_file_name = content['notebook_file_name']
+        print(f'Schedule jupyter notebook run: {notebook_file_name}')
+        notebook_path = Path('/home/ubuntu/Projects/dispatcherMembrane/segmentation/') / notebook_file_name
+        assert notebook_path.is_file() and notebook_path.exists, notebook_path
         basedir_out='/home/ubuntu/tmp/'
         input_file_path = '/home/ubuntu/Projects/data/uploads/grzegorz.kossakowski@gmail.com/FISH1_BDNF488_1_cLTP_3_CA.czi'
         jobDownload = queueDispatcher.enqueue(
