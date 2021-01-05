@@ -15,7 +15,8 @@ from processing import datasets_processing
 import tempfile
 import os
 
-from flask import Flask, request, jsonify
+from flask import Flask,  jsonify, flash, request, redirect, url_for
+from werkzeug.utils import secure_filename
 app = Flask(__name__)
 app.config.from_pyfile('config.py')
 
@@ -184,6 +185,32 @@ def trigger_segmentation_after_upload(input_path_czi):
                                                               str(input_path_czi))
     # run_segmentation.main now works with strings instead of paths!
     return Path(segmentation_path_npy)
+
+
+
+# curl -F email=m.zdanowicz@gmail.com -F 'file=@/home/ubuntu/Projects/data/uploads/28.png'  localhost:5000/extend_scratchpad
+@app.route('/extend_scratchpad',  methods=['POST'])
+def extend_scratchpad():
+    if request.method == 'POST':
+        print('extend_scratchpad: Extending scratchpad.')
+        if 'file' not in request.files:
+            print("extend_scratchpad: No file in files.")
+            return jsonify({'feedback': 'Error: no files here :/'})
+        else:
+            # Add a file to the scratchpad
+            file = request.files['file']
+            email = request.form['email']
+            print(f"extend_scratchpad[filename]: {file.filename}")
+            print(f"extend_scratchpad[email]: {email}")
+            filename = secure_filename(file.filename)
+            path_scratchpad = Path(app.config['IMAGESPATH']) / \
+                email / "scratchpad" / "0" 
+            print(f"extend_scratchpad: Saving file at {path_scratchpad / filename}.")
+            file.save(path_scratchpad / filename)
+            metadata = datasets_processing.load_metadata(path_scratchpad)
+            datasets_processing.extend_dataset([filename], metadata)
+            datasets_processing.save_metadata(path_scratchpad, metadata)
+    return jsonify({'feedback': 'Success :)'})
 
 
 # https://www.twilio.com/blog/first-task-rq-redis-python
