@@ -24,9 +24,12 @@ def main(notebook_path, basedir_out, input_file_path):
     print(orig_parameters)
 
     input_file_name = Path(input_file_path).stem
+    out_mask_filepath = f'{basedir_out}/masks_2D_stitched_{input_file_name}.npy'
 
     # Update one or more parameters
-    params = parameter_values(orig_parameters, basedir_out=basedir_out, czi_file_path=input_file_path)
+    params = parameter_values(orig_parameters, 
+        czi_file_path=input_file_path,
+        out_mask_filepath=out_mask_filepath)
 
     print(params)
 
@@ -38,7 +41,7 @@ def main(notebook_path, basedir_out, input_file_path):
         nbformat.write(new_nb, f)
     print(f'Wrote notebook trace to {notebook_trace_file_path}')
 
-    return notebook_trace_file_path
+    return out_mask_filepath, notebook_trace_file_path
     
 
 if __name__ == "__main__":
