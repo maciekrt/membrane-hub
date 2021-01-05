@@ -88,15 +88,18 @@ class ImageRenderer(object):
         return data
 
     def load_segm(self, name):
-        n = len(self.viewer.layers)
-        self.viewer.open(str(name))
-        data = self.viewer.layers[n].data
-        self.viewer.layers.pop(n)
-        if len(data.shape) == 4:
-            print(f"load_segm[data.shape[0]]: Equal to {data.shape[0]}.")
-            data = data[0, ...]
-        print(f"load_segm[shape]: {data.shape}")
-        return data
+        if name.suffix == '.npy':
+            mask = np.load(name)
+        else:
+            n = len(self.viewer.layers)
+            self.viewer.open(str(name))
+            data = self.viewer.layers[n].data
+            self.viewer.layers.pop(n)
+            if len(data.shape) == 4:
+                print(f"load_segm[data.shape[0]]: Equal to {data.shape[0]}.")
+                mask = data[0, ...]
+            print(f"load_segm[shape]: {mask.shape}")
+        return mask
 
     def prepare_canvas(self):
         """
@@ -136,15 +139,20 @@ class ImageRenderer(object):
                                           preserve_range=True)
             io.write_png(str(path), imgResized.astype(np.uint8))
 
-    def process(self, names, masked='no', **kwargs):
-        """
-        file_path: Path
-        names: list of names for consecutive layers
-        masked: 'yes' / 'no' / 'both'
-        """
+    
+    # TODO Change possible values for rendering_mode
+    def process(self, names, rendering_mode='no', **kwargs):
+        """Process 
+        
+        Keyword arguments:
+        file_path: Path -- path to the file
+        names -- list of names for consecutive layers
+        rendering_mode -- 'yes' / 'no' / 'both'
+        """ 
+        
         # The path for the results of the processing
         print(f"process: Processing {self.result_path}..")
-        assert (self.mask_path is not None) or (masked == 'no')
+        assert (self.mask_path is not None) or (rendering_mode == 'no')
 
         # Iterated channels and z
         for c in tqdm(list(range(self.channels))):
@@ -155,12 +163,12 @@ class ImageRenderer(object):
                 self.viewer.dims.set_point(0, c)
                 self.viewer.dims.set_point(1, z)
                 # Unmasked
-                if masked in ['no', 'both']:
+                if rendering_mode in ['no', 'both']:
                     img = self.headless_renderer.render()
                     # This renders all the sizes and scales provided in **kwargs
                     self.save(img, result_name, folders=str(c), **kwargs)
-                # Masked
-                if masked in ['yes', 'both']:
+                # rendering_mode
+                if rendering_mode in ['yes', 'both']:
                     self.viewer.layers[1].visible = True
                     img = self.headless_renderer.render()
                     # This renders all the sizes and scales provided in **kwargs
@@ -202,15 +210,16 @@ class ImageRenderer(object):
 
 def func():
     path_file = Path(
-        "/home/ubuntu/Projects/data/uploads/191004_Chr1/191004_Chr1_488_cLTP_9_CA.lsm")
-    path_mask = Path("/home/ubuntu/Projects/data/uploads/191004_Chr1/segmentation.tif")
-    path_result = Path("/home/ubuntu/Projects/data/uploads/example/")
+        "/home/ubuntu/Projects/data/uploads/manual-zip-download/FISH_BDNF_romi_CA/FISH1_BDNF488_10_DMSO_romi_4_CA.czi")
+    path_mask = Path(
+        "/home/ubuntu/tmp/masks_2D_stitched_FISH1_BDNF488_10_DMSO_romi_4_CA.npy")
+    path_result = Path("/home/ubuntu/Projects/data/images/example/")
 
-    renderer = ImageRenderer(path_file, path_mask)
+    renderer = ImageRenderer(path_file, None)
     metadata1 = renderer.prepare_canvas()
     print(f"metadata1: {metadata1}")
     names = [str(x) for x in range(metadata1['z'])]
-    metadata2 = renderer.process(names=names, masked='yes', scales=[1], sizes=[])
+    metadata2 = renderer.process(names=names, rendering_mode='no', scales=[1], sizes=[])
     print(f"metadata2: {metadata1}")
     renderer.copy_results(path_result)
 
