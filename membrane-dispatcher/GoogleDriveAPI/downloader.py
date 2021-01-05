@@ -13,53 +13,67 @@ from googleapiclient.http import MediaIoBaseDownload
 SCOPES = ['https://www.googleapis.com/auth/drive.metadata.readonly',
           'https://www.googleapis.com/auth/drive']
 
-def parseGDriveName(name):
+def parse_gdrive_name(name):
     s = name.split("/")
     return s[5]
 
-def downloadFile(token_path, credentials_path, url, outputFolder):
+def download_file(token_path, credentials_path, url, output_folder):
+    """
+    Parameters:
+    token_path: Path
+    credentials_path: Path
+    url: str
+    output_folder: Path
+
+    Output: Path
+    The path
+    """
     creds = None
     # The file token.pickle stores the user's access and refresh tokens, and is
     # created automatically when the authorization flow completes for the first
     # time.
-    if os.path.exists(token_path):
-        with open(token_path, 'rb') as token:
+    if token_path.exists():
+        with open(str(token_path), 'rb') as token:
             creds = pickle.load(token)
-        print("downloadFile: Credentials successfully loaded.")
+        print("download_file: Credentials successfully loaded.")
     # If there are no (valid) credentials available, let the user log in.
     if not creds or not creds.valid:
         if creds and creds.expired and creds.refresh_token:
             creds.refresh(Request())
         else:
             flow = InstalledAppFlow.from_client_secrets_file(
-                credentials_path, SCOPES)
+                str(credentials_path), SCOPES)
             creds = flow.run_local_server(port=0)
         # Save the credentials for the next run
-        with open(token_path, 'wb') as token:
+        with open(str(token_path), 'wb') as token:
             pickle.dump(creds, token)
 
     service = build('drive', 'v3', credentials=creds)
 
-    file_id = parseGDriveName(url)
+    file_id = parse_gdrive_name(url)
     request = service.files().get(fileId=file_id)
     file = request.execute()
     request = service.files().get_media(fileId=file_id)
-    fh = io.FileIO(Path(outputFolder) / file['name'], 'wb')
+    output_path = output_folder / file['name']
+    fh = io.FileIO(output_path, 'wb')
     downloader = MediaIoBaseDownload(fh, request)
     done = False
-    print(f"downloadFile[file_name]: {file['name']}.")
-    print(f"downloadFile[file_id]: {file_id}.")
+    print(f"download_file[file_name]: {file['name']}.")
+    print(f"download_file[file_id]: {file_id}.")
     while done is False:
         try:
             status, done = downloader.next_chunk()
             print(f"Download {int(status.progress() * 100)}%.")
         except:
             fh.close()
-    return file['name']
+    return output_path
 
 
-# time python downloader.py token.pickle 
-# https://drive.google.com/file/d/1ZTKw5y7vQl0Tz_TFSTih6S06q_nCw3sR/view?usp=sharing
+# time python downloader.py token.pickle
+URL = 'https://drive.google.com/file/d/1JIc8LNzJdm88Lb99ZwYnHQdb4EfTA_ph/view?usp=sharing'
+TOKENPATH = '../secrets/token.pickle'
+CREDENTIALSPATH = '../secrets/credentials.json'
+HERE = './'
 
 def main():
     """Shows basic usage of the Drive v3 API.
@@ -68,13 +82,18 @@ def main():
     https://developers.google.com/drive/api/v3/reference/files/get
     https://developers.google.com/drive/api/v3/quickstart/python
     """
-    parser = argparse.ArgumentParser()
-    parser.add_argument('token', help='Google Token file.')
-    parser.add_argument('url', help='Google Drive url.')
-    args = parser.parse_args()
-    url = args.url
-    token_path = args.token
-    downloadFile(token_path, url)
-
+    # parser = argparse.ArgumentParser()
+    # parser.add_argument('token', help='Google Token file.')
+    # parser.add_argument('url', help='Google Drive url.')
+    # args = parser.parse_args()
+    # url = args.url
+    # token_path = args.token
+    download_file(
+        Path(TOKENPATH), 
+        Path(CREDENTIALSPATH),
+        URL,
+        Path(HERE)
+    )
+    
 if __name__ == '__main__':
     main()

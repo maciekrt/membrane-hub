@@ -13,6 +13,8 @@ import datetime
 
 def main(notebook_path, basedir_out, input_file_path):
 
+    notebook_file_stem = Path(notebook_path).stem
+
     with open(notebook_path) as f:
         nb = nbformat.read(f, as_version=4)
 
@@ -31,7 +33,7 @@ def main(notebook_path, basedir_out, input_file_path):
     new_nb = replace_definitions(nb, params, execute=False)
     execute(new_nb)
     timestamp_filename_safe = datetime.datetime.now().strftime("%Y_%m_%d-%H_%M_%S")
-    notebook_trace_file_path = f"{basedir_out}/run_quick_{input_file_name}_{timestamp_filename_safe}.ipynb"
+    notebook_trace_file_path = f"{basedir_out}/{notebook_file_stem}_{input_file_name}_{timestamp_filename_safe}.ipynb"
     with open(notebook_trace_file_path, 'w') as f:
         nbformat.write(new_nb, f)
     print(f'Wrote notebook trace to {notebook_trace_file_path}')

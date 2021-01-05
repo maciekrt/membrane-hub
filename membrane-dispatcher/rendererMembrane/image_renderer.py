@@ -18,27 +18,37 @@ import vispy.io as io
 from vispy import app
 app.use_app('osmesa')
 
+
 class ImageRenderer(object):
     """
     Parameters:
-    filepath: str
-    resultpath: str
+    file_path: str
+    result_path: str
 
     Attributes:
     viewer: ViewerModel 
         ...
     """
 
-    def __init__(self, filepath, maskpath, resultpath):
+    def __init__(self, file_path, mask_path):
         self.viewer = ViewerModel()
-        self.headlessRenderer = HeadlessRenderer(self.viewer)
+        self.headless_renderer = HeadlessRenderer(self.viewer)
         print("Headless Renderer instantiated..")
-        self.filepath = Path(filepath)
-        if maskpath:
-            self.maskpath = Path(maskpath)
+        self.file_path = Path(file_path)
+        if mask_path:
+            self.mask_path = Path(mask_path)
         else:
-            self.maskpath = None
-        self.resultpath = Path(resultpath)
+            self.mask_path = None
+        # Everything will be rendered to temp
+        # and can be then moved to the right place
+        # determined by the dataset logic.
+        tmpDir = tempfile.mkdtemp()
+        os.chmod(tmpDir, 0o775)
+        self.result_path = Path(tmpDir)
+
+    def __del__(self):
+        # Remove temp dir mate
+        shutil.rmtree(str(self.result_path), ignore_errors=True)
 
     def load_data(self, name):
         n = len(self.viewer.layers)
@@ -70,10 +80,10 @@ class ImageRenderer(object):
         if d == 5:
             if data.shape[0] > 1:
                 print(f"load_data[data.shape[0]]: Equal to {data.shape[0]}.")
-            data = data[0,...]
+            data = data[0, ...]
         # .lsm requires transposing it is in (TZCYX) format.
         if name.suffix == '.lsm':
-            data = np.moveaxis(data,0,1)
+            data = np.moveaxis(data, 0, 1)
         print(f"load_data[shape, end]: {data.shape}")
         return data
 
@@ -84,95 +94,125 @@ class ImageRenderer(object):
         self.viewer.layers.pop(n)
         if len(data.shape) == 4:
             print(f"load_segm[data.shape[0]]: Equal to {data.shape[0]}.")
-            data = data[0,...]
+            data = data[0, ...]
         print(f"load_segm[shape]: {data.shape}")
         return data
 
-    def prepareCanvas(self):
+    def prepare_canvas(self):
         """
-        prepareCanvas
+        Prepare canvas and return z and number of channels.
+        This is the core of the processing work.
         """
         # Image
-        dataImage = self.load_data(self.filepath)
-        self.viewer.add_image(dataImage, colormap='turbo')
+        data_image = self.load_data(self.file_path)
+        self.viewer.add_image(data_image, colormap='turbo')
         # Mask
-        self.channels, self.z = dataImage.shape[:2]
-        if self.maskpath:
-            data = self.load_segm(self.maskpath)
-            dataMask = np.repeat(data[None, ...], self.channels, axis=0)
-            self.viewer.add_labels(dataMask, name="segmentation")
+        self.channels, self.z = data_image.shape[:2]
+        if self.mask_path:
+            data = self.load_segm(self.mask_path)
+            data_mask = np.repeat(data[None, ...], self.channels, axis=0)
+            self.viewer.add_labels(data_mask, name="segmentation")
             self.viewer.layers[1].visible = False
         # self.viewer.dims.ndisplay = 2
         size = self.viewer.layers[0].extent.data[1].astype(np.int64)[::-1]
-        self.headlessRenderer.canvas.size = 1 + size
-        self.headlessRenderer.camera.zoom = 1.0
+        self.headless_renderer.canvas.size = 1 + size
+        self.headless_renderer.camera.zoom = 1.0
+        return {'channels': self.channels, 'z': self.z}
 
-    def save(self, img, nameBase, folders = "", scales=[1], sizes=[]):
-        pathBase = self.resultpath / folders
-        pathBase.mkdir(parents=True, exist_ok=True)
+    def save(self, img, name_base, folders="", scales=[1], sizes=[]):
+        path_base = self.result_path / folders
+        path_base.mkdir(parents=True, exist_ok=True)
         for scale in scales:
-            name = f"{nameBase}_x{scale}.png"
-            path = pathBase / name
-            imgRescaled = transform.rescale(img, 1/scale, anti_aliasing=True,
-                                            preserve_range=True, multichannel=True)
-            io.write_png(str(path), imgRescaled.astype(np.uint8))
+            name = f"{name_base}_x{scale}.png"
+            path = path_base / name
+            img_rescaled = transform.rescale(img, 1/scale, anti_aliasing=True,
+                                             preserve_range=True, multichannel=True)
+            io.write_png(str(path), img_rescaled.astype(np.uint8))
         for size in sizes:
             x, y = size
-            name = f"{nameBase}_{x}x{y}.png"
-            path = pathBase / name
+            name = f"{name_base}_{x}x{y}.png"
+            path = path_base / name
             imgResized = transform.resize(img, size, anti_aliasing=True,
-                                            preserve_range=True)
+                                          preserve_range=True)
             io.write_png(str(path), imgResized.astype(np.uint8))
 
-    def process(self, **kwargs):
+    def process(self, names, masked='no', **kwargs):
         """
-        filepath: Path
+        file_path: Path
+        names: list of names for consecutive layers
+        masked: 'yes' / 'no' / 'both'
         """
         # The path for the results of the processing
-        print(f"process: Processing {self.resultpath}..")
+        print(f"process: Processing {self.result_path}..")
+        assert (self.mask_path is not None) or (masked == 'no')
 
         # Iterated channels and z
         for c in tqdm(list(range(self.channels))):
             for z in tqdm(list(range(self.z))):
-                resName = str(z).zfill(2)
-                resMaskedName = (resName + "_masked")
+                result_name = names[z]
+                result_masked_name = (result_name + "_masked")
                 # There are some iterable dims
                 self.viewer.dims.set_point(0, c)
                 self.viewer.dims.set_point(1, z)
                 # Unmasked
-                img = self.headlessRenderer.render()
-                # print(f"Rendered {Path(folder) / resName}.")
-                # This renders all the sizes and scales provided in **kwargs
-                self.save(img, resName, folders=str(c), **kwargs)
-                # Masked
-                if self.maskpath:
-                    self.viewer.layers[1].visible = True
-                    img = self.headlessRenderer.render()
-                    # print(f"Rendered {Path(folder) / resMaskedName}.")
+                if masked in ['no', 'both']:
+                    img = self.headless_renderer.render()
                     # This renders all the sizes and scales provided in **kwargs
-                    self.save(img, resMaskedName, folders=str(c), **kwargs)
+                    self.save(img, result_name, folders=str(c), **kwargs)
+                # Masked
+                if masked in ['yes', 'both']:
+                    self.viewer.layers[1].visible = True
+                    img = self.headless_renderer.render()
+                    # This renders all the sizes and scales provided in **kwargs
+                    self.save(img, result_masked_name,
+                              folders=str(c), **kwargs)
         print("Done.")
-        # Return the longest visualised dimension
         # Returning some metadata
-        resultMetadata = {}
-        resultMetadata['masked'] = not (self.maskpath is None)
-        resultMetadata['z'] = self.z
-        resultMetadata['channels'] = self.channels
-        return resultMetadata
+        result_metadata = {
+            'masked': (self.mask_path is not None),
+            'z': self.z, 
+            'channels': self.channels
+        }
+        return result_metadata
+
+    def copy_results(self, path_result):
+        print(
+            f"ImageRenderer.copy_results: Copying {self.result_path} to {path_result}"
+        )
+        shutil.copytree(self.result_path, path_result, dirs_exist_ok=True)
 
 
-def processImage(filepath, maskpath, resultpath, scales = [1], sizes=[]):
-    tmpDir = tempfile.mkdtemp()
-    os.chmod(tmpDir, 0o775)
-    renderer = ImageRenderer(filepath,maskpath,tmpDir)
-    renderer.prepareCanvas()
-    # Returning metadata
-    metadata = renderer.process(scales=scales, sizes=sizes)
-    print(f"processImage: Moving from {tmpDir} to {resultpath}.")
-    # TAKE A LOOK AT THAT
-    shutil.rmtree(resultpath, ignore_errors=True)
-    shutil.move(tmpDir, resultpath)
-    return metadata
+# def process_image(file_path, mask_path, result_path, scales=[1], sizes=[]):
+#     """
+#     file_path: file to render
+#     mask_path: mask to be applied
+#     result_path: folder where to put the result
+#     """
+#     tmpDir = tempfile.mkdtemp()
+#     os.chmod(tmpDir, 0o775)
+#     renderer = ImageRenderer(file_path, mask_path, tmpDir)
+#     renderer.prepare_canvas()
+#     # Returning metadata
+#     metadata = renderer.process(scales=scales, sizes=sizes)
+#     print(f"processImage: Moving from {tmpDir} to {result_path}.")
+#     # TAKE A LOOK AT THAT
+#     shutil.rmtree(result_path, ignore_errors=True)
+#     shutil.move(tmpDir, result_path)
+#     return metadata
+
+def func():
+    path_file = Path(
+        "/home/ubuntu/Projects/data/uploads/191004_Chr1/191004_Chr1_488_cLTP_9_CA.lsm")
+    path_mask = Path("/home/ubuntu/Projects/data/uploads/191004_Chr1/segmentation.tif")
+    path_result = Path("/home/ubuntu/Projects/data/uploads/example/")
+
+    renderer = ImageRenderer(path_file, path_mask)
+    metadata1 = renderer.prepare_canvas()
+    print(f"metadata1: {metadata1}")
+    names = [str(x) for x in range(metadata1['z'])]
+    metadata2 = renderer.process(names=names, masked='yes', scales=[1], sizes=[])
+    print(f"metadata2: {metadata1}")
+    renderer.copy_results(path_result)
 
 # '0.4.1a2.dev24+gc278fb4'
 # It's working with the following commit ab1e371cb132201347a87be64314fbbe6c2f8b29
