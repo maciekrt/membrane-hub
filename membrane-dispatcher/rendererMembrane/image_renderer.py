@@ -20,23 +20,20 @@ app.use_app('osmesa')
 
 
 class ImageRenderer(object):
-    """
-    Parameters:
-    file_path: str
-    result_path: str
-
-    Attributes:
-    viewer: ViewerModel 
-        ...
-    """
 
     def __init__(self, file_path, mask_path):
+        """Constructor of a ImageRenderer. 
+
+        Keyword arguments:
+        file_path: Path -- input image path
+        mask_path: Path -- input masks path
+        """
         self.viewer = ViewerModel()
         self.headless_renderer = HeadlessRenderer(self.viewer)
         print("Headless Renderer instantiated..")
-        self.file_path = Path(file_path)
+        self.file_path = file_path
         if mask_path:
-            self.mask_path = Path(mask_path)
+            self.mask_path = mask_path
         else:
             self.mask_path = None
         # Everything will be rendered to temp
@@ -46,16 +43,12 @@ class ImageRenderer(object):
         os.chmod(tmpDir, 0o775)
         self.result_path = Path(tmpDir)
 
-    def __del__(self):
-        # Remove temp dir mate
-        shutil.rmtree(str(self.result_path), ignore_errors=True)
-
-    def load_data(self, name):
+    def load_data(self, path_image):
         n = len(self.viewer.layers)
-        if name.suffix == '.czi':
-            data = AICSImage(str(name)).data
+        if path_image.suffix == '.czi':
+            data = AICSImage(str(path_image)).data
         else:
-            self.viewer.open(str(name), layer_type='image')
+            self.viewer.open(str(path_image), layer_type='image')
             data = self.viewer.layers[n].data
             self.viewer.layers.pop(n)
         d = len(data.shape)
@@ -82,17 +75,17 @@ class ImageRenderer(object):
                 print(f"load_data[data.shape[0]]: Equal to {data.shape[0]}.")
             data = data[0, ...]
         # .lsm requires transposing it is in (TZCYX) format.
-        if name.suffix == '.lsm':
+        if path_image.suffix == '.lsm':
             data = np.moveaxis(data, 0, 1)
         print(f"load_data[shape, end]: {data.shape}")
         return data
 
-    def load_segm(self, name):
-        if name.suffix == '.npy':
-            mask = np.load(name)
+    def load_segm(self, path_mask):
+        if path_mask.suffix == '.npy':
+            mask = np.load(path_mask)
         else:
             n = len(self.viewer.layers)
-            self.viewer.open(str(name))
+            self.viewer.open(str(path_mask))
             data = self.viewer.layers[n].data
             self.viewer.layers.pop(n)
             if len(data.shape) == 4:
@@ -139,55 +132,59 @@ class ImageRenderer(object):
                                           preserve_range=True)
             io.write_png(str(path), imgResized.astype(np.uint8))
 
-    
-    # TODO Change possible values for rendering_mode
-    def process(self, names, rendering_mode='no', **kwargs):
-        """Process 
-        
+    def render(self, rendering_mode='image only', **kwargs):
+        """Rendering the file.  The output is saved to a temporary 
+        directory which is returned along with some metadata.
+
         Keyword arguments:
-        file_path: Path -- path to the file
-        names -- list of names for consecutive layers
-        rendering_mode -- 'yes' / 'no' / 'both'
-        """ 
-        
+        rendering_mode -- 'mask only' / 'image only' / 'both'
+        **kwargs -- scales and sizes for the renderer. For example
+            scales = [1,2], sizes = [(100,100)] makes the function
+            render the images in the original size, magnified 2 times 
+            and with 100x100 thumbnals.
+
+        Returns:
+        {
+            z: int, 
+            channels: int, 
+            output_path: Path, 
+            masked: bool
+        }
+        """
+
         # The path for the results of the processing
         print(f"process: Processing {self.result_path}..")
-        assert (self.mask_path is not None) or (rendering_mode == 'no')
+        assert (self.mask_path is not None) or (rendering_mode == 'image only')
 
         # Iterated channels and z
         for c in tqdm(list(range(self.channels))):
             for z in tqdm(list(range(self.z))):
-                result_name = names[z]
+                result_name = str(z)
                 result_masked_name = (result_name + "_masked")
                 # There are some iterable dims
                 self.viewer.dims.set_point(0, c)
                 self.viewer.dims.set_point(1, z)
                 # Unmasked
-                if rendering_mode in ['no', 'both']:
+                if rendering_mode in ['image only', 'both']:
                     img = self.headless_renderer.render()
                     # This renders all the sizes and scales provided in **kwargs
                     self.save(img, result_name, folders=str(c), **kwargs)
                 # rendering_mode
-                if rendering_mode in ['yes', 'both']:
+                if rendering_mode in ['mask only', 'both']:
                     self.viewer.layers[1].visible = True
                     img = self.headless_renderer.render()
                     # This renders all the sizes and scales provided in **kwargs
                     self.save(img, result_masked_name,
                               folders=str(c), **kwargs)
-        print("Done.")
+        print("ImageRenderer.render: Done.")
         # Returning some metadata
         result_metadata = {
             'masked': (self.mask_path is not None),
-            'z': self.z, 
-            'channels': self.channels
+            'z': self.z,
+            'channels': self.channels,
+            'output_path': self.result_path
         }
         return result_metadata
-
-    def copy_results(self, path_result):
-        print(
-            f"ImageRenderer.copy_results: Copying {self.result_path} to {path_result}"
-        )
-        shutil.copytree(self.result_path, path_result, dirs_exist_ok=True)
 
 
 # def process_image(file_path, mask_path, result_path, scales=[1], sizes=[]):
@@ -216,12 +213,11 @@ def func():
     path_result = Path("/home/ubuntu/Projects/data/images/example/")
 
     renderer = ImageRenderer(path_file, None)
-    metadata1 = renderer.prepare_canvas()
-    print(f"metadata1: {metadata1}")
-    names = [str(x) for x in range(metadata1['z'])]
-    metadata2 = renderer.process(names=names, rendering_mode='no', scales=[1], sizes=[])
-    print(f"metadata2: {metadata1}")
-    renderer.copy_results(path_result)
+    metadata = renderer.prepare_canvas()
+    print(f"metadata1: {metadata}")
+    rendered_output = renderer.render(
+        rendering_mode='image only', scales=[1], sizes=[])
+    print(f"metadata2: {rendered_output}")
 
 # '0.4.1a2.dev24+gc278fb4'
 # It's working with the following commit ab1e371cb132201347a87be64314fbbe6c2f8b29
