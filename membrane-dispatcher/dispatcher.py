@@ -12,6 +12,8 @@ import shutil
 from segmentation import run_segmentation
 from processing import unzipper
 from processing import datasets_processing
+import tempfile
+import os
 
 from flask import Flask, request, jsonify
 app = Flask(__name__)
@@ -22,6 +24,7 @@ queue_dispatcher = Queue('dispatcherMembrane', connection=redis_conn,
                          timeout=3600)  # no args implies the default queue
 
 
+# TODO Write docstring here
 def process_download(email):
     list_files = []
     current_job = get_current_job()
@@ -42,65 +45,106 @@ def process_download(email):
         list_files.extend([path_downloaded])
     else:
         print("What's happening here, mate!?")
-    for file in list_files:
+    for file_path in list_files:
         queue_dispatcher.enqueue(
-            process_image,
-            file,
+            render_image_and_gen_metadata,
+            file_path,
             email
         )
+        segmentation_job = queue_dispatcher.enqueue(
+            trigger_segmentation_after_upload,
+            file_path,
+            job_timeout='15m'
+        )
+        queue_dispatcher.enqueue(
+            render_segmentation,
+            file_path,
+            email,
+            depends_on=segmentation_job
+        )
 
-"""
-   
-    metadata1 = renderer.prepare_canvas()
-    print(f"metadata1: {metadata1}")
-    names = [str(x) for x in range(metadata1['z'])]
-    metadata2 = renderer.process(names=names, masked='yes', scales=[1], sizes=[])
-    print(f"metadata2: {metadata1}")
-    renderer.copy_results(path_result)
-"""
 
-def process_image(path_file, email):
+# TODO Write docstring here
+def render_segmentation(source_image_path, email):
+    """
+    Keyword arguments:
+    source_image_path: Path -- ..
+    email: str -- ..
+    """
+    print(f"dispatcher.render_segmentation: Rendering segmentation "
+          f"for {source_image_path}.")
+    current_job = get_current_job()
+    job = current_job.dependency
+    segmentation_path = job.result
+    print(
+        f"dispatcher.render_segmentation: The masks are in {segmentation_path}.")
+    renderer = ImageRenderer(source_image_path, segmentation_path)
+    image_data = renderer.prepare_canvas()
+    rendered_output = renderer.render(
+        rendering_mode='mask only',
+        scales=[1],
+        sizes=[(100, 100)]
+    )
+    rendered_output_path = rendered_output['output_path']
+    path_dataset = Path(app.config['IMAGESPATH']) / \
+        email / source_image_path.name
+    datasets_processing.populate_dataset(
+        path_dataset,
+        rendered_output_path
+    )
+    metadata = datasets_processing.load_metadata(path_dataset)
+    metadata['masked'] = True
+    datasets_processing.save_metadata(path_dataset, metadata)
+
+
+# TODO Move the metadata processing to a separate function (most likely in datasets_processing)
+def render_image_and_gen_metadata(path_file, email):
+    """Rendering the images without masks and populating the corresponding dataset.
+        Metadata processing should be moved elsewhere.
+
+    Keyword arguments:
+    source_image_path: Path -- ..
+    email: str -- ..
+    """
     # Path(app.config['IMAGESPATH']) / email / file.name
-    print(f"process_image[path_file]: {path_file}")
+    print(f"dispatcher.render_image_and_gen_metadata[path_file]: {path_file}")
     renderer = ImageRenderer(path_file, None)
     image_data = renderer.prepare_canvas()
-    print(f"process_image[metadata]: {image_data}")
+    print(f"dispatcher.render_image_and_gen_metadata[metadata]: {image_data}")
     if image_data['z'] == 1:
         # Two dimensional set so for now let's just process scratchpad data
-        print(f"process_image: Processing 2D set")
-        scratchpad_dataset = Path(app.config['IMAGESPATH']) / email / "scratchpad"
+        print(f"dispatcher.render_image_and_gen_metadata: Processing 2D set")
+        scratchpad_dataset = Path(
+            app.config['IMAGESPATH']) / email / "scratchpad"
         metadata = datasets_processing.load_metadata(scratchpad_dataset)
         datasets_processing.extend_dataset([])
         datasets_processing.save_metadata(scratchpad_dataset, metadata)
     else:
-        # Three dimensional set 
-        print(f"process_image: Processing 3D set")
+        # Three dimensional set
+        print(f"dispatcher.render_image_and_gen_metadata: Processing 3D set")
         path_dataset = Path(app.config['IMAGESPATH']) / email / path_file.name
         metadata = datasets_processing.initialize_dataset(
             path_dataset,
             channels=image_data['channels'],
             dims="3D"
         )
-        proposed_names = datasets_processing.propose_names(image_data['z'], metadata)
-        renderer.process(
-            names=proposed_names, 
-            masked='no', 
-            scales=[1], 
-            sizes=[(100,100)]
+        rendering_output = renderer.render(
+            rendering_mode='image only',
+            scales=[1],
+            sizes=[(100, 100)]
         )
-        renderer.copy_results(path_dataset)
-        datasets_processing.extend_dataset(proposed_names, metadata)
+        rendered_output_path = rendering_output['output_path']
+        rendered_z = rendering_output['z']
+        datasets_processing.extend_dataset(
+            [str(x) for x in range(rendered_z)], metadata)
         metadata['active'] = True
+        datasets_processing.populate_dataset(
+            path_dataset, rendered_output_path)
         datasets_processing.save_metadata(path_dataset, metadata)
-        
-    # Process meta data.. CHANGE IT URGENTLY!!
-    # metadata["active"] = True
-    # metadata["source"] = str(path_file)
-    # with open(path_result / "metadata.json", 'w') as out_file:
-    #     json.dump(metadata, out_file)
-    print("process_image: Done.")
+    print("dispatcher.render_image_and_gen_metadata: Done.")
 
 
+# TODO Write docstring here
 def initialize(path_result, url):
     print(f"initialize: {path_result} {url}")
     hashed_name = hashlib.sha224(url.encode('utf-8')).hexdigest()
@@ -117,8 +161,30 @@ def finalize(path):
     shutil.rmtree(str(path), ignore_errors=True)
 
 
-def trigger_segmentation():
-    run_segmentation.main()
+# Remember about timeout 15m
+def trigger_segmentation_after_upload(input_path_czi):
+    """Computes the segmentation masks for the input .czi file.
+
+    Keyword arguments:
+    input_path_czi: Path -- input path to a .czi file
+
+    Returns:
+    a path to the output segmentation .npy file
+    """
+    notebook_file_name = 'run_cellpose_GPU_membrane.ipynb'
+    print(f'Schedule jupyter notebook run: {notebook_file_name}')
+    notebook_path = Path(
+        '/home/ubuntu/Projects/dispatcherMembrane/segmentation/') / notebook_file_name
+    assert notebook_path.is_file() and notebook_path.exists, notebook_path
+    basedir_out = tempfile.mkdtemp()
+    os.chmod(basedir_out, 0o775)
+    # '/home/ubuntu/Projects/data/uploads/grzegorz.kossakowski@gmail.com/FISH1_BDNF488_1_cLTP_3_CA.czi'
+    segmentation_path_npy, trace_path = run_segmentation.main(notebook_path,
+                                                              basedir_out,
+                                                              str(input_path_czi))
+    # run_segmentation.main now works with strings instead of paths!
+    return Path(segmentation_path_npy)
+
 
 # https://www.twilio.com/blog/first-task-rq-redis-python
 @app.route('/send',  methods=['POST'])
@@ -150,6 +216,7 @@ def send():
             depends_on=job_download)
     return jsonify({'feedback': 'SUCCESS :)'})
 
+
 # https://www.twilio.com/blog/first-task-rq-redis-python
 @app.route('/upload_file',  methods=['POST'])
 def upload_file():
@@ -180,27 +247,17 @@ def upload_file():
             depends_on=job_download)
     return jsonify({'feedback': 'SUCCESS :)'})
 
+
 # try with:
-# curl -d '{"notebook_file_name": "run_quick.ipynb"}' -H 'Content-Type: application/json' localhost:5000/segmentation
-
-
+# json='{"input_file_path": "[your czi name], "email": "email"}'; curl -d "$json" -H 'Content-Type: application/json' localhost:5000/segmentation
 @app.route('/segmentation',  methods=['POST'])
 def segmentation():
     if request.method == 'POST':
         req_payload = request.json
-        # content['notebook_file_name']
-        notebook_file_name = 'run_cellpose_GPU_membrane.ipynb'
-        print(f'Schedule jupyter notebook run: {notebook_file_name}')
-        notebook_path = Path(
-            '/home/ubuntu/Projects/dispatcherMembrane/segmentation/') / notebook_file_name
-        assert notebook_path.is_file() and notebook_path.exists, notebook_path
-        basedir_out = '/home/ubuntu/tmp/'
         # '/home/ubuntu/Projects/data/uploads/grzegorz.kossakowski@gmail.com/FISH1_BDNF488_1_cLTP_3_CA.czi'
         input_file_path = req_payload['input_file_path']
         jobDownload = queue_dispatcher.enqueue(
-            run_segmentation.main,
-            notebook_path,
-            basedir_out,
+            trigger_segmentation_after_upload,
             input_file_path,
             job_timeout='15m'
         )

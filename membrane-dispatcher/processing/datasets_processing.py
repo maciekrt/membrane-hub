@@ -37,9 +37,10 @@ def save_metadata(path_dataset, metadata):
         json.dump(metadata, out_file)
 
 
+# TODO Write docstring here.
 def initialize_dataset(path_dataset, z=0, channels=1, dims="2D", sources=[], images=[]):
     path_dataset.mkdir()
-    metadata = {'active': False, 'z': z, 'channels': channels, 'dims': dims}
+    metadata = {'active': False, 'z': z, 'channels': channels, 'dims': dims, 'masked': False}
     metadata['sources'] = []
     metadata['images'] = []
     save_metadata(path_dataset, metadata)
@@ -47,8 +48,7 @@ def initialize_dataset(path_dataset, z=0, channels=1, dims="2D", sources=[], ima
 
 
 def initialize_mock(path_datasets, url):
-    """
-    Initializing a mock dataset. Returning its path along with
+    """Initializing a mock dataset. Returning its path along with
     temporary metadata.
     """
     print(f"initialize_mock: {path_datasets} {url}")
@@ -60,29 +60,34 @@ def initialize_mock(path_datasets, url):
     return path, metadata_mock
 
 
-def finalize_mock(path):
-    print(f"finalize_mock: {path}")
-    shutil.rmtree(str(path), ignore_errors=True)
+def finalize_mock(path_dataset):
+    print(f"datasets_processing.finalize_mock: {path_dataset}")
+    shutil.rmtree(str(path_dataset), ignore_errors=True)
 
 
-def propose_names(num, metadata, files=None):
-    """
-    Propose the names for the extension of the dataset.  
-    Currently, we are just increasing numbers (but we might be taking care of the 
-    actual names and other image level metadata).
-    """
-    z = 0
-    if metadata['active']:
-        z = metadata['z']
-    return [str(x) for x in range(z, z+num)]
-
-
+# TODO Write docstring here
 def extend_dataset(list_files, metadata):
     """
     Extending the data 
     """
     metadata['images'].extend(list_files)
     metadata['z'] += len(list_files)
+
+
+def populate_dataset(path_dataset, path_output_rendered):
+    """Copies the rendered images to the dataset's folder.
+
+    Keyword arguments:
+    path_dataset: Path -- path to the dataset
+    path_output_rendered -- path to the result of rendering
+    """
+    print(f"datasets_processing.populate_dataset: Copying data "
+          f"from {path_output_rendered} to {path_dataset}")
+    shutil.copytree(
+        src=path_output_rendered,
+        dst=path_dataset,
+        dirs_exist_ok=True
+    )
 
 
 def add_masks(metadata):
