@@ -10,8 +10,7 @@ module.exports = withOptimizedImages({
                 use: {
                     loader: 'responsive-loader',
                     options: { adapter: require('responsive-loader/sharp') } }
-    }
-    ]
+            }]
     },
     webpack: (config, { isServer }) => {
         // Fixes npm packages that depend on 'fs' module
@@ -21,8 +20,16 @@ module.exports = withOptimizedImages({
                 net: "empty" // then i put the 'net' line
             };
         }
-
         return config;
-    }
+    },
     // your config for other plugins or the general next.js here...
+    images: {
+        domains: ['hub.membrane.computer'],
+    },
+    rewrites: () => [
+        {
+            source: "/api/uploadScratchpad",
+            destination: "http://localhost:5000/extend_scratchpad",
+        },
+    ]
 });
