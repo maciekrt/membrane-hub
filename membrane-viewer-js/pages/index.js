@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react'
 import Head from 'next/head'
 import Link from 'next/link'
 import { useRouter } from 'next/router'
+import useSWR from 'swr'
 
 import Layout, { siteTitle } from '../components/layout'
 import ListDatasets from '../components/listDatasets'
@@ -17,6 +18,7 @@ import {
   signOut,
   useSession,
 } from 'next-auth/client'
+
 
 function Messaging() {
   const router = useRouter()
@@ -47,17 +49,21 @@ function Messaging() {
   )
 }
 
-import useSWR from 'swr'
 
-const fetcher = (url) => fetch(url)
-  .then(res => res.json())
-  .then(data => { console.log(`fetcher[data]: ${JSON.stringify(data)}`); return data})
+function useDatasetsSWR(session) {
+  const fetcher = (url) => fetch(url)
+    .then(res => res.json())
+    .then(data => { console.log(`fetcher[data]: ${JSON.stringify(data)}`); return data })
+  const { data, error } = session ? useSWR(`/api/datasets/${session.user.email}`, fetcher, { refreshInterval: 2000 }) : { data: undefined, error: undefined }
+  return { data, error }
+}
+
 
 export default function Home() {
   const [session, loading] = useSession()
 
-  const { data , error } = session ? useSWR(`/api/datasets/${session.user.email}`, fetcher, { refreshInterval: 2000 }) : { data: undefined, error: undefined }
-
+  // Getting datasets via SWR
+  const { data, error } = useDatasetsSWR(session)
   const datasets = data?.datasets
 
   return (
@@ -94,14 +100,14 @@ export default function Home() {
         }
       </div>
       <div>
-        <RenderUserDatasets loggedIn={!!session?.user} datasets={datasets}/>
+        <RenderUserDatasets loggedIn={!!session?.user} datasets={datasets} />
+        {error && <><p class="error">{error}</p></>}
       </div>
-      { error && <><p class="error">{error}</p></>}
     </Layout>
   )
 }
 
-function RenderUserDatasets({loggedIn, datasets}) {
+function RenderUserDatasets({ loggedIn, datasets }) {
   if (!loggedIn)
     return <p>No images visible here..</p>
   else

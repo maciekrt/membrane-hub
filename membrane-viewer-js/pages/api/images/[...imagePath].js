@@ -12,7 +12,7 @@ export default async function handler(req, res) {
             query: { imagePath },
         } = req;
         const FOLDER = process.env.IMAGES_FOLDER;
-        var name = imagePath.join('/');
+        var pathImageLocal = imagePath.join('/');
         const domainMe = session.user.email.split("@")[1]
         const domainLink = imagePath[0].split("@")[1]
 
@@ -23,7 +23,7 @@ export default async function handler(req, res) {
             } else {
                 console.log("Image: same domains - OK.")
             }
-            var buffer = fs.readFileSync(`${FOLDER}${name}`);
+            var buffer = fs.readFileSync(`${FOLDER}${pathImageLocal}`);
             res.setHeader('Cache-Control', 'public, must-revalidate, max-age=3155760');
             res.setHeader('Content-Type', 'image/png')
             res.status(200).send(buffer)

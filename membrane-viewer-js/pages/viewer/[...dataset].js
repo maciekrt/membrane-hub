@@ -19,15 +19,17 @@ export default function Dataset({ name, file, error, metadata, images }) {
     const imgIdx = router.query.img_idx ? parseInt(router.query.img_idx) : 0
     const chIdx = router.query.ch_idx ? parseInt(router.query.ch_idx) : 0
 
-    
-    function ourOnSlide(cur) {
-        const chIdx = router.query.ch_idx ? parseInt(router.query.ch_idx) : 0
-        router.push(`/viewer/${name}/${file}/?img_idx=${cur}&ch_idx=${chIdx}`, undefined, { shallow: true })
+    /**
+     * Clicking the slider changes the img_idx in the address
+     * @param {int} idx  
+     */
+    function ourOnSlide(idx) { 
+        const channel_idx = router.query.ch_idx ? parseInt(router.query.ch_idx) : 0
+        router.push(`/viewer/${name}/${file}/?img_idx=${idx}&ch_idx=${channel_idx}`, undefined, { shallow: true })
     }
 
     function ToggleChannel() {
         const cur = router.query.img_idx ? parseInt(router.query.img_idx) : 0
-
         return (<> 
             { 
                 [...Array(parseInt(metadata.channels))].map((_, i) => {
@@ -94,10 +96,12 @@ export async function getServerSideProps(context) {
     const session = await getSession({ req })
     var name = context.params.dataset
 
-    console.log(`Dataset: ${name.join('/')} TUTAJ ${name[0]} ${name[1]}`)
+    console.log(`api/viewer: Working on ${name.join('/')}`)
 
     if(session) {
-        console.log(`Viewer: ${session.user.email} ${name}`)
+        console.log(`api/viewer: Security check for ${session.user.email} ${name[0]}`)
+        // Those two are necessary for our current security policy.
+        // Should be replaced by some honest security module.
         const domainMe = session.user.email.split("@")[1]
         const domainLink = name[0].split("@")[1]
 
@@ -105,10 +109,11 @@ export async function getServerSideProps(context) {
             if (domainMe != domainLink) {
                 throw new Error("wrong domains")
             } else {
-                console.log("Dataset: same domains - OK.")
+                console.log("api/viewer: Security verification successful.")
             }
-            const imagesJSON = processImages(session.user.email, name.join('/'))
-            console.log(`viewer: Success.`)
+            const imagesJSON = processImages(name[0], name[1])
+            console.log(`api/viewer[images]: ${JSON.stringify(imagesJSON['images'])}`)
+            console.log(`api/viewer: Success.`)
             return {
                 props: {
                     name: name[0],
@@ -119,11 +124,11 @@ export async function getServerSideProps(context) {
                 }
             }
         } catch(err) {
-            console.log(`Not such file error. ${err.message}`)
+            console.log(`api/viwer: Not such file error. ${err.message}`)
             return { props: { error: "Not such a file" } }
         }
     } else {
-        console.log('Not logged in..')
+        console.log('api/viewer: Not logged in..')
         return { props: { error: "Not logged in" } }
     }
 }
