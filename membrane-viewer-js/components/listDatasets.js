@@ -1,9 +1,8 @@
 import Link from 'next/link'
+import Image from 'next/image'
 import styles from './listDatasets.module.css'
 
-import { useSession, getSession } from 'next-auth/client'
-
-import { pad } from '../logic/auxiliary'
+import { useSession } from 'next-auth/client'
 
 export default function ListDatasets({ datasets }) {
    const [session, loading] = useSession()
@@ -29,6 +28,7 @@ export default function ListDatasets({ datasets }) {
             <tr>
                <th>Dataset name</th>
                <th>Ready</th>
+               <th>Segmented</th>
                <th>Channels</th>
             </tr>
          </thead>
@@ -45,7 +45,30 @@ export default function ListDatasets({ datasets }) {
                      }
                   </td>
                   <td>
-                     {String(elem.metadata.active)}
+                     {elem.metadata.active ? <Image
+                        src="/tick.png"
+                        alt="Yes"
+                        width={30}
+                        height={30}
+                     /> : <Image
+                           src="/cross.png"
+                           alt="No"
+                           width={30}
+                           height={30}
+                        />}
+                  </td>
+                  <td>
+                     {elem.metadata.masked ? <Image
+                        src="/tick.png"
+                        alt="Yes"
+                        width={30}
+                        height={30}
+                     /> : <Image
+                           src="/cross.png"
+                           alt="No"
+                           width={30}
+                           height={30}
+                        />}
                   </td>
                   <td>{elem.metadata.active === true &&
                      <div className={styles.row}>
