@@ -316,3 +316,7 @@ def segmentation():
 @app.route('/')
 def index():
     return "Welcome to Membrane Dispatcher."
+
+
+if __name__ == '__main__':
+  app.run(host='localhost', port=app.config['PORT'])
