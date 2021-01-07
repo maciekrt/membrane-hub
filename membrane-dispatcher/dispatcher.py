@@ -15,14 +15,14 @@ from processing import datasets_processing
 import tempfile
 import os
 
-from flask import Flask,  jsonify, flash, request, redirect, url_for
+from flask import Flask, jsonify, make_response, flash, request, redirect, url_for
 from werkzeug.utils import secure_filename
 app = Flask(__name__)
 app.config.from_pyfile('config.py')
 
 redis_conn = Redis()
 queue_dispatcher = Queue('dispatcherMembrane', connection=redis_conn,
-                         timeout=3600)  # no args implies the default queue
+                         default_timeout=3600)  # no args implies the default queue
 
 
 # TODO Write docstring here
@@ -47,15 +47,16 @@ def process_download(email):
     else:
         print("What's happening here, mate!?")
     for file_path in list_files:
+        generate_metadata(file_path, email)
         queue_dispatcher.enqueue(
-            render_image_and_gen_metadata,
+            render_image,
             file_path,
             email
         )
         segmentation_job = queue_dispatcher.enqueue(
             trigger_segmentation_after_upload,
             file_path,
-            job_timeout='15m'
+            job_timeout='30m'
         )
         queue_dispatcher.enqueue(
             render_segmentation,
@@ -63,6 +64,57 @@ def process_download(email):
             email,
             depends_on=segmentation_job
         )
+
+
+def generate_metadata(file_path, email):
+    """Generating using ImageRenderer as an image analysis tool.
+        It collects some basic info (z, channels) concerning the image.
+
+    Keyword arguments:
+    file_path: Path -- Path to the image file
+    email: str -- ..
+    """
+    print(f"dispatcher.generate_metadata[file_path]: {file_path}")
+    renderer = ImageRenderer(file_path, None)
+    image_data = renderer.prepare_canvas()
+    path_dataset = Path(app.config['IMAGESPATH']) / email / file_path.name
+    metadata = datasets_processing.initialize_dataset(
+        path_dataset,
+        z=image_data['z'],
+        channels=image_data['channels'],
+        dims="3D"
+    )
+
+
+# TODO Move the metadata processing to a separate function (most likely in datasets_processing)
+def render_image(file_path, email):
+    """Rendering the images without masks and populating the corresponding dataset.
+        Metadata processing should be moved elsewhere.
+
+    Keyword arguments:
+    source_image_path: Path -- ..
+    email: str -- ..
+    """
+    # Path(app.config['IMAGESPATH']) / email / file.name
+    print(f"dispatcher.render_image[file_path]: {file_path}")
+    renderer = ImageRenderer(file_path, None)
+    image_data = renderer.prepare_canvas()
+    print(f"dispatcher.render_image: Processing 3D set")
+    path_dataset = Path(app.config['IMAGESPATH']) / email / file_path.name
+    rendering_output = renderer.render(
+        rendering_mode='image only',
+        scales=[1],
+        sizes=[(100, 100)]
+    )
+    rendered_output_path = rendering_output['output_path']
+    rendered_z = rendering_output['z']
+    metadata = datasets_processing.load_metadata(path_dataset)
+    assert metadata['z'] == rendered_z
+    datasets_processing.populate_dataset(
+        path_dataset, rendered_output_path, segmentation=False)
+    metadata['active'] = True
+    datasets_processing.save_metadata(path_dataset, metadata)
+    print("dispatcher.render_image: Done.")
 
 
 # TODO Write docstring here
@@ -76,7 +128,7 @@ def render_segmentation(source_image_path, email):
           f"for {source_image_path}.")
     current_job = get_current_job()
     job = current_job.dependency
-    segmentation_path = job.result
+    segmentation_path, trace_path = job.result
     print(
         f"dispatcher.render_segmentation: The masks are in {segmentation_path}.")
     renderer = ImageRenderer(source_image_path, segmentation_path)
@@ -89,60 +141,24 @@ def render_segmentation(source_image_path, email):
     rendered_output_path = rendered_output['output_path']
     path_dataset = Path(app.config['IMAGESPATH']) / \
         email / source_image_path.name
+    print(
+        f"dispatcher.render_segmentation: Copying masks from {rendered_output_path} "
+        f"to {path_dataset}")
     datasets_processing.populate_dataset(
         path_dataset,
-        rendered_output_path
+        rendered_output_path,
+        segmentation=True
     )
+    segmentation_output_path = Path(
+        app.config['SEGMENTATIONPATH']) / email / trace_path.name
+    print(
+        f"dispatcher.render_segmentation: Copying segmentation trace from {trace_path} "
+        f"to {segmentation_output_path}")
+    shutil.copy(trace_path, segmentation_output_path)
+    # Setting masks to true, however without activation
     metadata = datasets_processing.load_metadata(path_dataset)
     metadata['masked'] = True
     datasets_processing.save_metadata(path_dataset, metadata)
-
-
-# TODO Move the metadata processing to a separate function (most likely in datasets_processing)
-def render_image_and_gen_metadata(path_file, email):
-    """Rendering the images without masks and populating the corresponding dataset.
-        Metadata processing should be moved elsewhere.
-
-    Keyword arguments:
-    source_image_path: Path -- ..
-    email: str -- ..
-    """
-    # Path(app.config['IMAGESPATH']) / email / file.name
-    print(f"dispatcher.render_image_and_gen_metadata[path_file]: {path_file}")
-    renderer = ImageRenderer(path_file, None)
-    image_data = renderer.prepare_canvas()
-    print(f"dispatcher.render_image_and_gen_metadata[metadata]: {image_data}")
-    if image_data['z'] == 1:
-        # Two dimensional set so for now let's just process scratchpad data
-        print(f"dispatcher.render_image_and_gen_metadata: Processing 2D set")
-        scratchpad_dataset = Path(
-            app.config['IMAGESPATH']) / email / "scratchpad"
-        metadata = datasets_processing.load_metadata(scratchpad_dataset)
-        datasets_processing.extend_dataset([])
-        datasets_processing.save_metadata(scratchpad_dataset, metadata)
-    else:
-        # Three dimensional set
-        print(f"dispatcher.render_image_and_gen_metadata: Processing 3D set")
-        path_dataset = Path(app.config['IMAGESPATH']) / email / path_file.name
-        metadata = datasets_processing.initialize_dataset(
-            path_dataset,
-            channels=image_data['channels'],
-            dims="3D"
-        )
-        rendering_output = renderer.render(
-            rendering_mode='image only',
-            scales=[1],
-            sizes=[(100, 100)]
-        )
-        rendered_output_path = rendering_output['output_path']
-        rendered_z = rendering_output['z']
-        datasets_processing.extend_dataset(
-            [str(x) for x in range(rendered_z)], metadata)
-        metadata['active'] = True
-        datasets_processing.populate_dataset(
-            path_dataset, rendered_output_path)
-        datasets_processing.save_metadata(path_dataset, metadata)
-    print("dispatcher.render_image_and_gen_metadata: Done.")
 
 
 # TODO Write docstring here
@@ -184,33 +200,39 @@ def trigger_segmentation_after_upload(input_path_czi):
                                                               basedir_out,
                                                               str(input_path_czi))
     # run_segmentation.main now works with strings instead of paths!
-    return Path(segmentation_path_npy)
+    return Path(segmentation_path_npy), Path(trace_path)
 
 
-
-# curl -F email=m.zdanowicz@gmail.com -F 'file=@/home/ubuntu/Projects/data/uploads/28.png'  localhost:5000/extend_scratchpad
+# curl -F email=m.zdanowicz@gmail.com -F 'image=@/home/ubuntu/Projects/data/uploads/28.png'  localhost:5000/extend_scratchpad
 @app.route('/extend_scratchpad',  methods=['POST'])
 def extend_scratchpad():
     if request.method == 'POST':
-        print('extend_scratchpad: Extending scratchpad.')
+        print(f"dispatcher.extend_scratchpad: Extending scratchpad.")
+        print(f"headers: {request.headers}")
+        print(f"form: {request.form}")
+        print(f"data: {request.data}")
+
         if 'file' not in request.files:
-            print("extend_scratchpad: No file in files.")
-            return jsonify({'feedback': 'Error: no files here :/'})
+            print("dispatcher.extend_scratchpad: No file in files.")
+            return make_response(jsonify({'feedback': 'Error: no files here :/'}), 401)
         else:
             # Add a file to the scratchpad
+            print("dispatcher.extend_scratchpad: file is present.")
             file = request.files['file']
             email = request.form['email']
-            print(f"extend_scratchpad[filename]: {file.filename}")
-            print(f"extend_scratchpad[email]: {email}")
+            print(f"dispatcher.extend_scratchpad[filename]: {file.filename}")
+            print(f"dispatcher.extend_scratchpad[email]: {email}")
             filename = secure_filename(file.filename)
             path_scratchpad = Path(app.config['IMAGESPATH']) / \
-                email / "scratchpad" / "0" 
-            print(f"extend_scratchpad: Saving file at {path_scratchpad / filename}.")
-            file.save(path_scratchpad / filename)
+                email / "scratchpad"
+            print(f"extend_scratchpad: Saving file at {path_scratchpad}.")
+            path_files = path_scratchpad / "0"
+            file.save(path_files / filename)
             metadata = datasets_processing.load_metadata(path_scratchpad)
             datasets_processing.extend_dataset([filename], metadata)
             datasets_processing.save_metadata(path_scratchpad, metadata)
-    return jsonify({'feedback': 'Success :)'})
+        print(f"dispatcher.extend_scratchpad: Finished processing file.")
+    return make_response(jsonify({'feedback': 'Success :)'}), 200)
 
 
 # https://www.twilio.com/blog/first-task-rq-redis-python

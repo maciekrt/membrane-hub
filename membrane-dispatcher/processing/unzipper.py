@@ -24,7 +24,6 @@ def recurse_dataset(path):
       childFiles = [x for x in path.iterdir() if x.is_file() and x.suffix in exts 
          and not x.name.startswith(".")]
       listFiles.extend(childFiles)
-      print(f"{path}: {childFiles}")
       for folder in childDirs:
          _recurse(folder)
    _recurse(path)

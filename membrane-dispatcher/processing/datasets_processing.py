@@ -39,10 +39,10 @@ def save_metadata(path_dataset, metadata):
 
 # TODO Write docstring here.
 def initialize_dataset(path_dataset, z=0, channels=1, dims="2D", sources=[], images=[]):
-    path_dataset.mkdir()
+    path_dataset.mkdir(exist_ok=True)
     metadata = {'active': False, 'z': z, 'channels': channels, 'dims': dims, 'masked': False}
     metadata['sources'] = []
-    metadata['images'] = []
+    metadata['images'] = [str(n) for n in range(z)]
     save_metadata(path_dataset, metadata)
     return metadata
 
@@ -74,14 +74,14 @@ def extend_dataset(list_files, metadata):
     metadata['z'] += len(list_files)
 
 
-def populate_dataset(path_dataset, path_output_rendered):
+def populate_dataset(path_dataset, path_output_rendered, segmentation=False):
     """Copies the rendered images to the dataset's folder.
 
     Keyword arguments:
     path_dataset: Path -- path to the dataset
     path_output_rendered -- path to the result of rendering
     """
-    print(f"datasets_processing.populate_dataset: Copying data "
+    print(f"datasets_processing.populate_dataset[segmentation = {segmentation}]: Copying data "
           f"from {path_output_rendered} to {path_dataset}")
     shutil.copytree(
         src=path_output_rendered,
