@@ -21,7 +21,7 @@ app = Flask(__name__)
 app.config.from_pyfile('config.py')
 
 redis_conn = Redis()
-queue_dispatcher = Queue('dispatcherMembrane', connection=redis_conn,
+queue_dispatcher = Queue(app.config['QUEUE_NAME'], connection=redis_conn,
                          default_timeout=3600)  # no args implies the default queue
 
 

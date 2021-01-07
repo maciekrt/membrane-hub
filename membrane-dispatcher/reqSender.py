@@ -1,6 +1,6 @@
 import requests
 
-url = 'http://localhost:5000/send'
+url = 'http://localhost:5001/send'
 data = {
     'url': 'https://drive.google.com/file/d/18LH5EnCuIkX-XJfFigvp2HMv0yhclEQ1/view?usp=sharing',
     'email': 'm.zdanowicz@gmail.com',

@@ -4,13 +4,14 @@
 // https://ikartik.com/tutorials/nextjs-email-signup-part2
 // https://nodejs.dev/learn/make-an-http-post-request-using-nodejs
 
+
 export default async function handler(req, res) {
     var data = req.body
     console.log(`What the hell is the url: ${data['url']}`)
 
     const axios = require('axios')
     // POST to the Flask Service pushing to the queue
-    axios.post('http://localhost:5000/send', {
+    axios.post(`http://localhost:${process.env.PORT}/send`, {
             url: data['url'],
             gdrive: data['gdrive'],
             email: data['email']

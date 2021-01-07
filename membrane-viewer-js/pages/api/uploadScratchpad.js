@@ -1,5 +1,6 @@
 import { createProxyMiddleware } from "http-proxy-middleware";
 
+
 const restream = async function (proxyReq, req, res, options) {
     if (req.user) {
         if (
@@ -31,7 +32,7 @@ const restream = async function (proxyReq, req, res, options) {
 
 // Create proxy instance outside of request handler function to avoid unnecessary re-creation
 const apiProxy = createProxyMiddleware({
-    target: "http://localhost:5000",
+    target: `http://localhost:${process.env.PORT}`,
     changeOrigin: true,
     pathRewrite: {
         [`/api/uploadScratchpad`]: "/extend_scratchpad",
