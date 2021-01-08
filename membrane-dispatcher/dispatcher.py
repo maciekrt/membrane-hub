@@ -166,7 +166,7 @@ def initialize(path_result, url):
     print(f"initialize: {path_result} {url}")
     hashed_name = hashlib.sha224(url.encode('utf-8')).hexdigest()
     path = path_result / hashed_name
-    path.mkdir()
+    path.mkdir(exist_ok=True)
     metadata_JSON = {"url": url, "active": False}
     with open(path / "metadata.json", 'w') as out_file:
         json.dump(metadata_JSON, out_file)
@@ -235,7 +235,8 @@ def extend_scratchpad():
     return make_response(jsonify({'feedback': 'Success :)'}), 200)
 
 
-# https://www.twilio.com/blog/first-task-rq-redis-python
+# Try this up using the following (be careful that's a 20GB file)
+# json='{"url": "https://drive.google.com/file/d/1mtHLzrfkmJc6MpDbw8qux5L3Z7poWkRQ/view?usp=sharing", "email": "grzegorz.kossakowski@gmail.com", "gdrive": true}'; curl -d "$json" -H 'Content-Type: application/json' localhost:5000/send
 @app.route('/send',  methods=['POST'])
 def send():
     if request.method == 'POST':
