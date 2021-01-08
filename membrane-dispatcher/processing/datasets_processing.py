@@ -54,7 +54,7 @@ def initialize_mock(path_datasets, url):
     print(f"initialize_mock: {path_datasets} {url}")
     hashed_name = hashlib.sha224(url.encode('utf-8')).hexdigest()
     path = path_datasets / hashed_name
-    path.mkdir()
+    path.mkdir(exist_ok=True)
     metadata_mock = {"url": url, "active": False}
     save_metadata(path, metadata_mock)
     return path, metadata_mock
