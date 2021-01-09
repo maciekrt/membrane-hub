@@ -1,21 +1,29 @@
 import pickle
 import os.path
 import argparse
-import io, sys
+import io
+import sys
 from pathlib import Path
+import json
+
+from tqdm import tqdm
 
 from googleapiclient.discovery import build
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
 from googleapiclient.http import MediaIoBaseDownload
 
+from googleapiclient.errors import HttpError
+
 # If modifying these scopes, delete the file token.pickle.
 SCOPES = ['https://www.googleapis.com/auth/drive.metadata.readonly',
           'https://www.googleapis.com/auth/drive']
 
+
 def parse_gdrive_name(name):
     s = name.split("/")
     return s[5]
+
 
 def download_file(token_path, credentials_path, url, output_folder):
     """
@@ -58,15 +66,24 @@ def download_file(token_path, credentials_path, url, output_folder):
     output_path = output_folder / file['name']
     fh = io.FileIO(output_path, 'wb')
     downloader = MediaIoBaseDownload(fh, request)
-    done = False
     print(f"download_file[file_name]: {file['name']}.")
     print(f"download_file[file_id]: {file_id}.")
-    while done is False:
-        try:
-            status, done = downloader.next_chunk()
-            print(f"Download {int(status.progress() * 100)}%.")
-        except:
-            fh.close()
+
+    # Take a look here: /home/ubuntu/miniconda3/envs/google-drive/lib/python3.8/site-packages/googleapiclient
+    done = False
+    print(f"Downloading started..")
+    with tqdm(total=100) as pbar:
+        while done is False:
+            try:
+                status, done = downloader.next_chunk(num_retries=5)
+                progress = int(status.progress() * 100)
+                pbar.n = progress
+                pbar.refresh()
+            except HttpError as err:
+                print(f"HttpError: {err}")
+                fh.close()
+                raise err
+        fh.close()
     return output_path
 
 
@@ -75,6 +92,7 @@ URL = 'https://drive.google.com/file/d/1mtHLzrfkmJc6MpDbw8qux5L3Z7poWkRQ/view?us
 TOKENPATH = '../secrets/token.pickle'
 CREDENTIALSPATH = '../secrets/credentials.json'
 HERE = './'
+
 
 def main():
     """Shows basic usage of the Drive v3 API.
@@ -90,11 +108,12 @@ def main():
     # url = args.url
     # token_path = args.token
     download_file(
-        Path(TOKENPATH), 
+        Path(TOKENPATH),
         Path(CREDENTIALSPATH),
         URL,
         Path(HERE)
     )
-    
+
+
 if __name__ == '__main__':
     main()

@@ -1,5 +1,5 @@
 from rendererMembrane import ImageRenderer
-from rq import Queue, get_current_job
+from rq import Queue, Retry, get_current_job
 from redis import Redis
 from GoogleDriveAPI import downloader
 import time
@@ -253,7 +253,8 @@ def send():
             Path(app.config['TOKENPATH']),
             Path(app.config['CREDENTIALSPATH']),
             content['url'],
-            Path(app.config['UPLOADSPATH']) / content['email']
+            Path(app.config['UPLOADSPATH']) / content['email'],
+            retry=Retry(max=3, interval=[60, 120, 240])
         )
         queue_dispatcher.enqueue(
             process_download,
