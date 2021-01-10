@@ -137,7 +137,7 @@ class ImageRenderer(object):
         directory which is returned along with some metadata.
 
         Keyword arguments:
-        rendering_mode -- 'mask only' / 'image only' / 'both'
+        rendering_mode --  'image only' / 'mask 2D' / 'mask 3D'
         **kwargs -- scales and sizes for the renderer. For example
             scales = [1,2], sizes = [(100,100)] makes the function
             render the images in the original size, magnified 2 times 
@@ -149,37 +149,47 @@ class ImageRenderer(object):
             channels: int, 
             output_path: Path, 
             masked: bool
+            masked3d: bool
         }
         """
 
         # The path for the results of the processing
-        print(f"process: Processing {self.result_path}..")
+        print(
+            f"ImageRenderer.render: Processing {self.result_path} in mode {rendering_mode}..")
         assert (self.mask_path is not None) or (rendering_mode == 'image only')
 
         # Iterated channels and z
         for c in tqdm(list(range(self.channels))):
             for z in tqdm(list(range(self.z))):
-                result_name = str(z)
-                result_masked_name = (result_name + "_masked")
                 # There are some iterable dims
                 self.viewer.dims.set_point(0, c)
                 self.viewer.dims.set_point(1, z)
                 # Unmasked
-                if rendering_mode in ['image only', 'both']:
+                result_name = str(z)
+                if rendering_mode == 'image only':
                     img = self.headless_renderer.render()
                     # This renders all the sizes and scales provided in **kwargs
                     self.save(img, result_name, folders=str(c), **kwargs)
                 # rendering_mode
-                if rendering_mode in ['mask only', 'both']:
+                if rendering_mode == 'mask 2D':
+                    result_masked_name = (result_name + "_masked")
                     self.viewer.layers[1].visible = True
                     img = self.headless_renderer.render()
                     # This renders all the sizes and scales provided in **kwargs
                     self.save(img, result_masked_name,
                               folders=str(c), **kwargs)
+                if rendering_mode == 'mask 3D':
+                    result_masked3d_name = (result_name + "_masked3d")
+                    self.viewer.layers[1].visible = True
+                    img = self.headless_renderer.render()
+                    # This renders all the sizes and scales provided in **kwargs
+                    self.save(img, result_masked3d_name,
+                              folders=str(c), **kwargs)
         print("ImageRenderer.render: Done.")
         # Returning some metadata
         result_metadata = {
-            'masked': (self.mask_path is not None),
+            'masked': (self.mask_path is not None) and rendering_mode == 'mask 2D',
+            'masked3d': (self.mask_path is not None) and rendering_mode == 'mask 3D',
             'z': self.z,
             'channels': self.channels,
             'output_path': self.result_path
