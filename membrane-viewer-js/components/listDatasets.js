@@ -29,20 +29,20 @@ export default function ListDatasets({ datasets }) {
                <th>Dataset name</th>
                <th>Ready</th>
                <th>Segmented</th>
+               <th>Algorithm</th>
                <th>Channels</th>
             </tr>
          </thead>
          <tbody>
             <> {datasets.map((elem, idx) => (
                <tr>
-                  <td>{elem.metadata.active == true &&
-                     <Link href={`/viewer/${session.user.email}/${elem.imagename}`}>
-                        <a>{elem.imagename}</a>
-                     </Link>
-                  }
-                     {elem.metadata.active == false &&
-                        <>{elem.imagename}</>
+                  <td>
+                     { elem.metadata.active == true &&
+                        <Link href={`/viewer/${session.user.email}/${elem.imagename}`}>
+                           <a>{elem.imagename}</a>
+                        </Link>
                      }
+                     { elem.metadata.active == false && <>{elem.imagename}</> }
                   </td>
                   <td>
                      {elem.metadata.active ? <Image
@@ -70,14 +70,17 @@ export default function ListDatasets({ datasets }) {
                            height={30}
                         />}
                   </td>
-                  <td>{elem.metadata.active === true &&
-                     <div className={styles.row}>
-                        <ThumbnailsList elem={elem} />
-                     </div>
-                  }
-                     {elem.metadata.active === false &&
-                        <>Waiting..</>
+                  <td>
+                     { elem.metadata.masked && <p>2D</p> }
+                     { elem.metadata.masked3d && <p>3D</p> }
+                  </td>
+                  <td>
+                     { elem.metadata.active === true &&
+                        <div className={styles.row}>
+                           <ThumbnailsList elem={elem} />
+                        </div>
                      }
+                     { elem.metadata.active === false && <>Waiting..</> }
                   </td>
                </tr>))
             }
