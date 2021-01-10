@@ -75,10 +75,26 @@ def process_download(email):
             render_segmentation,
             file_path,
             email,
+            mode="mask 2D",  # Important this is 
             depends_on=segmentation_job
+        )
+        # Doing a similar job for a 3D segmentation
+        segmentation_3d_job = queue_dispatcher_default.enqueue(
+            trigger_segmentation_3d_after_upload,
+            file_path,
+            job_timeout='60m',
+            result_ttl=86400
+        )
+        queue_dispatcher_high.enqueue(
+            render_segmentation,
+            file_path,
+            email,
+            mode="mask 3D",
+            depends_on=segmentation_3d_job
         )
 
 
+# Note this assumes the dataset is 3-dimensional
 def generate_metadata(file_path, email):
     """Generating using ImageRenderer as an image analysis tool.
         It collects some basic info (z, channels) concerning the image.
@@ -95,7 +111,8 @@ def generate_metadata(file_path, email):
         path_dataset,
         z=image_data['z'],
         channels=image_data['channels'],
-        dims="3D"
+        dims="3D",
+        source = str(file_path)
     )
 
 
@@ -131,13 +148,13 @@ def render_image(file_path, email):
 
 
 # TODO Write docstring here
-def render_segmentation(source_image_path, email):
+def render_segmentation(source_image_path, email, mode="mask 2D"):
     """
     Keyword arguments:
     source_image_path: Path -- ..
     email: str -- ..
     """
-    print(f"dispatcher.render_segmentation: Rendering segmentation "
+    print(f"dispatcher.render_segmentation: Rendering segmentation in mode {mode}."
           f"for {source_image_path}.")
     current_job = get_current_job()
     job = current_job.dependency
@@ -147,7 +164,7 @@ def render_segmentation(source_image_path, email):
     renderer = ImageRenderer(source_image_path, segmentation_path)
     image_data = renderer.prepare_canvas()
     rendered_output = renderer.render(
-        rendering_mode='mask only',
+        rendering_mode=mode,
         scales=[1],
         sizes=[(100, 100)]
     )
@@ -156,7 +173,7 @@ def render_segmentation(source_image_path, email):
         email / source_image_path.name
     print(
         f"dispatcher.render_segmentation: Copying masks from {rendered_output_path} "
-        f"to {path_dataset}")
+        f"to {path_dataset}.")
     datasets_processing.populate_dataset(
         path_dataset,
         rendered_output_path,
@@ -170,7 +187,10 @@ def render_segmentation(source_image_path, email):
     shutil.copy(trace_path, segmentation_output_path)
     # Setting masks to true, however without activation
     metadata = datasets_processing.load_metadata(path_dataset)
-    metadata['masked'] = True
+    if mode == 'mask 2D':
+        metadata['masked'] = True
+    if mode == 'mask 3D':
+        metadata['masked3d'] = True
     datasets_processing.save_metadata(path_dataset, metadata)
 
 
@@ -203,8 +223,7 @@ def trigger_segmentation_after_upload(input_path_czi):
     """
     notebook_file_name = 'run_cellpose_GPU_membrane.ipynb'
     print(f'Schedule jupyter notebook run: {notebook_file_name}')
-    notebook_path = Path(
-        '/home/ubuntu/Projects/dispatcherMembrane/segmentation/') / notebook_file_name
+    notebook_path = Path('./segmentation/') / notebook_file_name
     assert notebook_path.is_file() and notebook_path.exists, notebook_path
     basedir_out = tempfile.mkdtemp()
     os.chmod(basedir_out, 0o775)
@@ -226,8 +245,7 @@ def trigger_segmentation_3d_after_upload(input_path_czi):
     """
     notebook_file_name = 'run_cellpose_GPU_membrane_3d.ipynb'
     print(f'Schedule jupyter notebook run: {notebook_file_name}')
-    notebook_path = Path(
-        '/home/ubuntu/Projects/dispatcherMembrane/segmentation/') / notebook_file_name
+    notebook_path = Path('./segmentation/') / notebook_file_name
     assert notebook_path.is_file() and notebook_path.exists, notebook_path
     basedir_out = tempfile.mkdtemp()
     os.chmod(basedir_out, 0o775)

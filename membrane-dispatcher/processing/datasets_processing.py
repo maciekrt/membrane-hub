@@ -13,9 +13,9 @@ It contains the following field:
     dims: "2D" / "3D" | two or three dimensional>
     sources: str or list of str | list of str if dataset is in scratchpad mode
     active: bool | is the set active or is it a a mock placeholder   
+    masked: bool
+    masked3d: bool
 """
-
-
 def load_metadata(path_dataset):
     """
     Load the metadata of the dataset included in path_dataset.
@@ -25,7 +25,7 @@ def load_metadata(path_dataset):
             data = json.load(in_file)
             return data
     except:
-        print('Unexpected error :/')
+        raise "datasets_processing.load_metadata: Unexpected error :/"
     return None
 
 
@@ -38,10 +38,11 @@ def save_metadata(path_dataset, metadata):
 
 
 # TODO Write docstring here.
-def initialize_dataset(path_dataset, z=0, channels=1, dims="2D", sources=[], images=[]):
+def initialize_dataset(path_dataset, z=0, channels=1, dims="2D", source="", images=[]):
     path_dataset.mkdir(exist_ok=True)
-    metadata = {'active': False, 'z': z, 'channels': channels, 'dims': dims, 'masked': False}
-    metadata['sources'] = []
+    metadata = {'active': False, 'z': z, 'channels': channels,
+                'dims': dims, 'masked': False, 'masked3d': False}
+    metadata['source'] = source
     metadata['images'] = [str(n) for n in range(z)]
     save_metadata(path_dataset, metadata)
     return metadata
@@ -82,7 +83,7 @@ def populate_dataset(path_dataset, path_output_rendered, segmentation=False):
     path_output_rendered -- path to the result of rendering
     """
     print(f"datasets_processing.populate_dataset[segmentation = {segmentation}]: Copying data "
-          f"from {path_output_rendered} to {path_dataset}")
+          f"from {path_output_rendered} to {path_dataset}.")
     shutil.copytree(
         src=path_output_rendered,
         dst=path_dataset,
