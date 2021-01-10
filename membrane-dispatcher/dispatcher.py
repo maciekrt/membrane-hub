@@ -249,7 +249,7 @@ def extend_scratchpad():
 
 
 # Try this up using the following (be careful that's a 20GB file)
-# # json='{"url": "https://drive.google.com/file/d/1mtHLzrfkmJc6MpDbw8qux5L3Z7poWkRQ/view?usp=sharing", "email": "m.zdanowicz@gmail.com", "gdrive": true}'; curl -d "$json" -H 'Content-Type: application/json' localhost:5001/send
+# json='{"url": "https://drive.google.com/file/d/1mtHLzrfkmJc6MpDbw8qux5L3Z7poWkRQ/view?usp=sharing", "email": "m.zdanowicz@gmail.com", "gdrive": true}'; curl -d "$json" -H 'Content-Type: application/json' localhost:5001/send
 # Alternative test with small.czi (6 .czi files zipped together) 
 # https://drive.google.com/file/d/1aui6RFMQakxBzZ1E0GB-UKGlu0CNwnSS/view?usp=sharing
 @app.route('/send',  methods=['POST'])
@@ -288,6 +288,28 @@ def send():
             Path(app.config['IMAGESPATH']) / content['email'] / hashed_name,
             depends_on=job_process,
             at_front=True
+        )
+    return jsonify({'feedback': 'SUCCESS :)'})
+
+
+# https://www.twilio.com/blog/first-task-rq-redis-python
+@app.route('/upload_file',  methods=['POST'])
+def upload_file():
+    if request.method == 'POST':
+        content = request.json
+        print("send: Downloading the file..")
+        print(f"send[url]: {content['url']}")
+        print(f"send[gdrive]: {content['gdrive']}")
+        print(f"send[email]: {content['email']}")
+        hashed_name = initialize(
+            Path(app.config['IMAGESPATH']) / content['email'],
+            content['url'])
+        job_download = queue_dispatcher.enqueue(
+            downloader.download_file,
+            Path(app.config['TOKENPATH']),
+            Path(app.config['CREDENTIALSPATH']),
+            content['url'],
+            Path(app.config['UPLOADSPATH']) / content['email']
         )
     return jsonify({'feedback': 'SUCCESS :)'})
 
