@@ -9,29 +9,29 @@ export function processImages(email, name) {
    var fs = require('fs');
    const pathDataset = `${email}/${name}`
    const metadataFile = fs.readFileSync(`${FOLDER}${pathDataset}/metadata.json`)
+   // This a metadata file for the dataset
    const metadata = JSON.parse(metadataFile)
    const files = [...Array(parseInt(metadata.channels))].map(
       (_, idxChannels) => {
-      const flags = [false]
-      if (metadata.masked == true)
-         flags.push(true)
-      return flags.map((flag, _) => {
-         var add = flag ? "_masked" : ""
-         var arr = []
-         if(metadata.dims === "2D") {
-            console.log(`logic/processImages[metadata.images]: ${metadata.images} `)
-            arr = metadata.images.map((filename, _) => ({
-               original: `/api/images/${pathDataset}/${idxChannels}/${filename}`,
-               thumbnail: `/api/images/${pathDataset}/${idxChannels}/${filename}`
-            }))
-         } else {
-            arr = metadata.images.map((filename, _) => ({
-               original: `/api/images/${pathDataset}/${idxChannels}/${filename}${add}_x1.png`,
-               thumbnail: `/api/images/${pathDataset}/${idxChannels}/${filename}${add}_100x100.png`
-            }))
-         }
-         return arr
-      })
+      var res = {unmasked: [], mask2D: [], mask3D: []}
+      res.unmasked = metadata.images.map((filename, _) => ({
+         original: `/api/images/${pathDataset}/${idxChannels}/${filename}_x1.png`,
+         thumbnail: `/api/images/${pathDataset}/${idxChannels}/${filename}_100x100.png`
+      }))
+      if (metadata.masked == true) {
+         res.mask2D = metadata.images.map((filename, _) => ({
+            original: `/api/images/${pathDataset}/${idxChannels}/${filename}_masked_x1.png`,
+            thumbnail: `/api/images/${pathDataset}/${idxChannels}/${filename}_masked_100x100.png`
+         }))
+      }
+      if (metadata.masked3d == true) {
+         res.mask3D = metadata.images.map((filename, _) => ({
+            original: `/api/images/${pathDataset}/${idxChannels}/${filename}_masked3d_x1.png`,
+            thumbnail: `/api/images/${pathDataset}/${idxChannels}/${filename}_masked3d_100x100.png`
+         }))
+      }
+      // console.log(`process_images[res]: ${JSON.stringify(res)}`)
+      return res
    })
    return ({
       metadata: metadata,

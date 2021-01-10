@@ -13,7 +13,7 @@ import { processImages } from '../../logic/serverImages'
 
 export default function Dataset({ name, file, error, metadata, images }) {
     const [session, loading] = useSession()
-    var [masked, setMasked] = useState(0)
+    var [masked, setMasked] = useState('unmasked')
     const router = useRouter()
     const { dataset } = router.query
     const imgIdx = router.query.img_idx ? parseInt(router.query.img_idx) : 0
@@ -23,21 +23,21 @@ export default function Dataset({ name, file, error, metadata, images }) {
      * Clicking the slider changes the img_idx in the address
      * @param {int} idx  
      */
-    function ourOnSlide(idx) { 
+    function ourOnSlide(idx) {
         const channel_idx = router.query.ch_idx ? parseInt(router.query.ch_idx) : 0
         router.push(`/viewer/${name}/${file}/?img_idx=${idx}&ch_idx=${channel_idx}`, undefined, { shallow: true })
     }
 
     function ToggleChannel() {
         const cur = router.query.img_idx ? parseInt(router.query.img_idx) : 0
-        return (<> 
-            { 
+        return (<>
+            {
                 [...Array(parseInt(metadata.channels))].map((_, i) => {
                     var add = " or "
                     if (i == 0) {
                         add = " "
                     }
-                    return <> {add} 
+                    return <> {add}
                         <a href={`/viewer/${name}/${file}/?img_idx=${cur}&ch_idx=${i}`}>
                             {i + 1}
                         </a>
@@ -48,20 +48,40 @@ export default function Dataset({ name, file, error, metadata, images }) {
     }
 
     function ToggleMasked() {
-        return (<> { metadata.masked === true &&
-            <>  
-            <> | </>
-            { masked == 1 && <>masked / <a onClick={() => setMasked(0)}>unmasked</a></> }
-            { masked == 0 && <><a onClick={() => setMasked(1)}>masked</a> / unmasked</> }
-            </> 
-        }</>
+        return (<> { (metadata.masked === true || metadata.masked3d === true) &&
+            <>
+                <> | </>
+                { masked == 'unmasked' && 
+                    <>
+                    <>unmasked</> 
+                    <>{ metadata.masked === true && <> / <a onClick={() => setMasked('mask2D')}>mask2D</a></>}</>
+                    <>{ metadata.masked3d === true && <> / <a onClick={() => setMasked('mask3D')}>mask3D</a></>}</> 
+                    </>
+                }
+                { masked == 'mask2D' &&
+                    <>
+                        <><a onClick={() => setMasked('unmasked')}>unmasked</a></>
+                        <> / mask2D</>
+                        <>{ metadata.masked3d === true && <> / <a onClick={() => setMasked('mask3D')}>mask3D</a></>}</>
+                    </>
+                }
+                { masked == 'mask3D' &&
+                    <>
+                        <><a onClick={() => setMasked('unmasked')}>unmasked</a></>
+                        <>{ metadata.masked === true && <> / <a onClick={() => setMasked('mask2D')}>mask2D</a></>}</>
+                        <> / mask3D</>
+                    </>
+                }
+            </>
+            }
+        </>
         )
     }
-    
+
     return (
         <Layout>
             <Head>
-            <title>{siteTitle}</title>
+                <title>{siteTitle}</title>
             </Head>
             <div>
                 <Link href='/'>
@@ -69,24 +89,39 @@ export default function Dataset({ name, file, error, metadata, images }) {
                 </Link>
             </div>
             <div>
-            {session &&  
-            <>
-                { error == 'OK' && <>
-                    <p>{name} / {file} / {chIdx + 1} </p>
-                    {name != session.user.email && <p>Shared with {session.user.email}</p>}
-                    <p> 
-                        { metadata.active === true && <>Active | </> }
-                        <ToggleChannel />
-                        <ToggleMasked />
-                    </p>
-                    <ImageGallery items={images[chIdx][masked]} slideDuration={50} 
-                        showPlayButton={false} showIndex={true} 
-                        startIndex={imgIdx} lazyLoad={true} onSlide={ourOnSlide} /> 
-                </> } 
-                { error != 'OK' && <><p>{error}</p> </> }
-            </>
-            }
-            {!session && <><p>Login mate pleaaase :) Error MSG {error}.</p></>}
+                {session &&
+                    <>
+                        {error == 'OK' && <>
+                            <p>{name} / {file} / {chIdx + 1} </p>
+                            {name != session.user.email && <p>Shared with {session.user.email}</p>}
+                            <p>
+                                {metadata.active === true && <>Active | </>}
+                                <ToggleChannel />
+                                <ToggleMasked />
+                            </p>
+                            {
+
+                            }
+                            {masked == 'unmasked' &&
+                                <ImageGallery items={images[chIdx].unmasked} slideDuration={50}
+                                    showPlayButton={false} showIndex={true}
+                                    startIndex={imgIdx} lazyLoad={true} onSlide={ourOnSlide} />
+                            }
+                            {masked == 'mask2D' &&
+                                <ImageGallery items={images[chIdx].mask2D} slideDuration={50}
+                                    showPlayButton={false} showIndex={true}
+                                    startIndex={imgIdx} lazyLoad={true} onSlide={ourOnSlide} />
+                            }
+                            {masked == 'mask3D' &&
+                                <ImageGallery items={images[chIdx].mask3D} slideDuration={50}
+                                    showPlayButton={false} showIndex={true}
+                                    startIndex={imgIdx} lazyLoad={true} onSlide={ourOnSlide} />
+                            }
+                        </>}
+                        {error != 'OK' && <><p>{error}</p> </>}
+                    </>
+                }
+                {!session && <><p>Login mate pleaaase :) Error MSG {error}.</p></>}
             </div>
         </Layout>)
 }
@@ -98,7 +133,7 @@ export async function getServerSideProps(context) {
 
     console.log(`api/viewer: Working on ${name.join('/')}`)
 
-    if(session) {
+    if (session) {
         console.log(`api/viewer: Security check for ${session.user.email} ${name[0]}`)
         // Those two are necessary for our current security policy.
         // Should be replaced by some honest security module.
@@ -123,8 +158,8 @@ export async function getServerSideProps(context) {
                     images: imagesJSON['images']
                 }
             }
-        } catch(err) {
-            console.log(`api/viwer: Not such file error. ${err.message}`)
+        } catch (err) {
+            console.log(`api/viewer: Not such file error. ${err.message}`)
             return { props: { error: "Not such a file" } }
         }
     } else {
