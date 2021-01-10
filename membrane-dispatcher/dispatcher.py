@@ -21,8 +21,17 @@ app = Flask(__name__)
 app.config.from_pyfile('config.py')
 
 redis_conn = Redis()
+QUEUE_NAME_HIGH = app.config['QUEUE_NAME']
+QUEUE_NAME_DEFAULT = app.config['QUEUE_NAME']
+QUEUE_NAME_LOW = app.config['QUEUE_NAME']
 queue_dispatcher = Queue(app.config['QUEUE_NAME'], connection=redis_conn,
                          default_timeout=3600)  # no args implies the default queue
+queue_dispatcher_high = Queue(app.config['QUEUE_NAME_HIGH'], connection=redis_conn,
+                              default_timeout=3600)  # no args implies the default queue
+queue_dispatcher_default = Queue(app.config['QUEUE_NAME_DEFAULT'], connection=redis_conn,
+                                 default_timeout=3600)  # no args implies the default queue
+queue_dispatcher_low = Queue(app.config['QUEUE_NAME_LOW'], connection=redis_conn,
+                             default_timeout=3600)  # no args implies the default queue
 
 
 # TODO Write docstring here
@@ -48,17 +57,21 @@ def process_download(email):
         print("What's happening here, mate!?")
     for file_path in list_files:
         generate_metadata(file_path, email)
-        queue_dispatcher.enqueue(
+        queue_dispatcher_high.enqueue(
             render_image,
             file_path,
             email
         )
-        segmentation_job = queue_dispatcher.enqueue(
+        # Result ttl set high because the data is necessary for render_segmentation
+        # which might happen later down the road (e.g., a lot of segmentations from
+        # other process). Should be adjusted once queues are prioritized
+        segmentation_job = queue_dispatcher_default.enqueue(
             trigger_segmentation_after_upload,
             file_path,
-            job_timeout='30m'
+            job_timeout='30m',
+            result_ttl=86400
         )
-        queue_dispatcher.enqueue(
+        queue_dispatcher_high.enqueue(
             render_segmentation,
             file_path,
             email,
@@ -236,7 +249,9 @@ def extend_scratchpad():
 
 
 # Try this up using the following (be careful that's a 20GB file)
-# json='{"url": "https://drive.google.com/file/d/1mtHLzrfkmJc6MpDbw8qux5L3Z7poWkRQ/view?usp=sharing", "email": "grzegorz.kossakowski@gmail.com", "gdrive": true}'; curl -d "$json" -H 'Content-Type: application/json' localhost:5000/send
+# # json='{"url": "https://drive.google.com/file/d/1mtHLzrfkmJc6MpDbw8qux5L3Z7poWkRQ/view?usp=sharing", "email": "m.zdanowicz@gmail.com", "gdrive": true}'; curl -d "$json" -H 'Content-Type: application/json' localhost:5001/send
+# Alternative test with small.czi (6 .czi files zipped together) 
+# https://drive.google.com/file/d/1aui6RFMQakxBzZ1E0GB-UKGlu0CNwnSS/view?usp=sharing
 @app.route('/send',  methods=['POST'])
 def send():
     if request.method == 'POST':
@@ -248,54 +263,32 @@ def send():
         hashed_name = initialize(
             Path(app.config['IMAGESPATH']) / content['email'],
             content['url'])
-        job_download = queue_dispatcher.enqueue(
+        # Result ttl set high because the data is necessary for the process_download
+        # which might happen later down the road (e.g., a lot of segmentations from
+        # other process). Should be adjusted once queues are prioritized
+        job_download = queue_dispatcher_high.enqueue(
             downloader.download_file,
             Path(app.config['TOKENPATH']),
             Path(app.config['CREDENTIALSPATH']),
             content['url'],
             Path(app.config['UPLOADSPATH']) / content['email'],
-            retry=Retry(max=3, interval=[60, 120, 240])
+            retry=Retry(max=3, interval=[60, 120, 240]),
+            result_ttl=86400,
+            at_front=True
         )
-        queue_dispatcher.enqueue(
+        job_process = queue_dispatcher_high.enqueue(
             process_download,
             content['email'],
-            depends_on=job_download
+            depends_on=job_download,
+            at_front=True
         )
-        queue_dispatcher.enqueue(
+        # That's really quick!
+        queue_dispatcher_high.enqueue(
             finalize,
             Path(app.config['IMAGESPATH']) / content['email'] / hashed_name,
-            depends_on=job_download)
-    return jsonify({'feedback': 'SUCCESS :)'})
-
-
-# https://www.twilio.com/blog/first-task-rq-redis-python
-@app.route('/upload_file',  methods=['POST'])
-def upload_file():
-    if request.method == 'POST':
-        content = request.json
-        print("send: Downloading the file..")
-        print(f"send[url]: {content['url']}")
-        print(f"send[gdrive]: {content['gdrive']}")
-        print(f"send[email]: {content['email']}")
-        hashed_name = initialize(
-            Path(app.config['IMAGESPATH']) / content['email'],
-            content['url'])
-        job_download = queue_dispatcher.enqueue(
-            downloader.download_file,
-            Path(app.config['TOKENPATH']),
-            Path(app.config['CREDENTIALSPATH']),
-            content['url'],
-            Path(app.config['UPLOADSPATH']) / content['email']
+            depends_on=job_process,
+            at_front=True
         )
-        queue_dispatcher.enqueue(
-            process_download,
-            content['email'],
-            depends_on=job_download
-        )
-        queue_dispatcher.enqueue(
-            finalize,
-            Path(app.config['IMAGESPATH']) / content['email'] / hashed_name,
-            depends_on=job_download)
     return jsonify({'feedback': 'SUCCESS :)'})
 
 
@@ -307,7 +300,7 @@ def segmentation():
         req_payload = request.json
         # '/home/ubuntu/Projects/data/uploads/grzegorz.kossakowski@gmail.com/FISH1_BDNF488_1_cLTP_3_CA.czi'
         input_file_path = req_payload['input_file_path']
-        jobDownload = queue_dispatcher.enqueue(
+        jobDownload = queue_dispatcher_default.enqueue(
             trigger_segmentation_after_upload,
             input_file_path,
             job_timeout='15m'
@@ -321,4 +314,4 @@ def index():
 
 
 if __name__ == '__main__':
-  app.run(host='localhost', port=app.config['PORT'])
+    app.run(host='localhost', port=app.config['PORT'])

@@ -71,7 +71,7 @@ def download_file(token_path, credentials_path, url, output_folder):
 
     # Take a look here: /home/ubuntu/miniconda3/envs/google-drive/lib/python3.8/site-packages/googleapiclient
     done = False
-    print(f"Downloading started..")
+    print(f"download_file: Downloading started..")
     with tqdm(total=100) as pbar:
         while done is False:
             try:
@@ -83,6 +83,7 @@ def download_file(token_path, credentials_path, url, output_folder):
                 print(f"HttpError: {err}")
                 fh.close()
                 raise err
+        print(f"download_file: Download successful.")
         fh.close()
     return output_path
 
