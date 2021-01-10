@@ -215,6 +215,29 @@ def trigger_segmentation_after_upload(input_path_czi):
     # run_segmentation.main now works with strings instead of paths!
     return Path(segmentation_path_npy), Path(trace_path)
 
+def trigger_segmentation_3d_after_upload(input_path_czi):
+    """Computes the segmentation masks for the input .czi file.
+
+    Keyword arguments:
+    input_path_czi: Path -- input path to a .czi file
+
+    Returns:
+    a path to the output segmentation .npy file
+    """
+    notebook_file_name = 'run_cellpose_GPU_membrane_3d.ipynb'
+    print(f'Schedule jupyter notebook run: {notebook_file_name}')
+    notebook_path = Path(
+        '/home/ubuntu/Projects/dispatcherMembrane/segmentation/') / notebook_file_name
+    assert notebook_path.is_file() and notebook_path.exists, notebook_path
+    basedir_out = tempfile.mkdtemp()
+    os.chmod(basedir_out, 0o775)
+    # '/home/ubuntu/Projects/data/uploads/grzegorz.kossakowski@gmail.com/FISH1_BDNF488_1_cLTP_3_CA.czi'
+    segmentation_path_npy, trace_path = run_segmentation.main(notebook_path,
+                                                              basedir_out,
+                                                              str(input_path_czi))
+    # run_segmentation.main now works with strings instead of paths!
+    return Path(segmentation_path_npy), Path(trace_path)
+
 
 # curl -F email=m.zdanowicz@gmail.com -F 'image=@/home/ubuntu/Projects/data/uploads/28.png'  localhost:5000/extend_scratchpad
 @app.route('/extend_scratchpad',  methods=['POST'])
@@ -323,7 +346,7 @@ def segmentation():
         # '/home/ubuntu/Projects/data/uploads/grzegorz.kossakowski@gmail.com/FISH1_BDNF488_1_cLTP_3_CA.czi'
         input_file_path = req_payload['input_file_path']
         jobDownload = queue_dispatcher_default.enqueue(
-            trigger_segmentation_after_upload,
+            trigger_segmentation_3d_after_upload,
             input_file_path,
             job_timeout='15m'
         )
