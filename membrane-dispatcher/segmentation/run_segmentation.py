@@ -1,7 +1,6 @@
 # requires
 # pip install nbparameterise
 # pip install cellpose
-import nbclient
 import nbformat
 from nbparameterise import (
     extract_parameters, replace_definitions, parameter_values
@@ -24,7 +23,12 @@ def main(notebook_path, basedir_out, input_file_path):
     print(orig_parameters)
 
     input_file_name = Path(input_file_path).stem
-    out_mask_filepath = f'{basedir_out}/masks_2D_stitched_{input_file_name}.npy'
+    if notebook_file_stem == 'run_cellpose_GPU_membrane':
+        out_mask_filepath = f'{basedir_out}/masks_2D_stitched_{input_file_name}.npy'
+    elif notebook_file_stem == 'run_cellpose_GPU_membrane_3d':
+        out_mask_filepath = f'{basedir_out}/masks_3D_{input_file_name}.npy'
+    else:
+        raise f'Unknown notebook type: {notebook_file_stem}'
 
     # Update one or more parameters
     params = parameter_values(orig_parameters, 
