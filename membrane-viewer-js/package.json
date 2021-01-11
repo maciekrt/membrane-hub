@@ -25,6 +25,7 @@
     "react-image-gallery": "^1.0.8",
     "react-toastify": "^6.2.0",
     "sqlite3": "^5.0.0",
+    "styled-components": "^5.2.1",
     "swr": "^0.3.11"
   },
   "devDependencies": {

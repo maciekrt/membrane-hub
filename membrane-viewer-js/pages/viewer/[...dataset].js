@@ -9,74 +9,85 @@ import { useSession, getSession } from 'next-auth/client'
 import Layout, { siteTitle } from '../../components/layout'
 import 'react-image-gallery/styles/css/image-gallery.css'
 import ImageGallery from 'react-image-gallery';
+import styled from 'styled-components'
 import { processImages } from '../../logic/serverImages'
+
+function ToggleVariables({urlBase, varName, varVals, defaultVal, varLabels, others, defaultVals}) {
+    const router = useRouter()
+    const othersValues = {}
+    const valCur = router.query[varName] ? router.query[varName] : defaultVal
+    var url = `${urlBase}?`
+
+    for(var i = 0; i<others.length; i++) {
+        var variable = others[i]
+        othersValues[variable] = router.query[variable] ? router.query[variable] : defaultVals[i]
+        url += `${variable}=${othersValues[variable]}&`
+    }
+    return (
+        <>{ 
+            varVals.map((val, i) => {
+                const urlTemp = `${url}${varName}=${val}`
+                const add = (i === 0) ? "" : " / "
+                if(valCur == val) 
+                    return <>{add}{varLabels[i]}</>
+                else
+                    return <>{add}<Link href={urlTemp} shallow scroll={false}>{varLabels[i]}</Link></>
+            }) 
+        }</>
+    )
+}
 
 export default function Dataset({ name, file, error, metadata, images }) {
     const [session, loading] = useSession()
-    var [masked, setMasked] = useState('unmasked')
+    // var [masked, setMasked] = useState('unmasked')
     const router = useRouter()
-    const { dataset } = router.query
     const imgIdx = router.query.img_idx ? parseInt(router.query.img_idx) : 0
     const chIdx = router.query.ch_idx ? parseInt(router.query.ch_idx) : 0
+    const masked = router.query.mask_val ? router.query.mask_val : "unmasked"
 
-    /**
-     * Clicking the slider changes the img_idx in the address
-     * @param {int} idx  
-     */
     function ourOnSlide(idx) {
         const channel_idx = router.query.ch_idx ? parseInt(router.query.ch_idx) : 0
-        router.push(`/viewer/${name}/${file}/?img_idx=${idx}&ch_idx=${channel_idx}`, undefined, { shallow: true })
+        const mask_val = router.query.mask_val ? router.query.mask_val : "unmasked"
+        router.push(`/viewer/${name}/${file}/?img_idx=${idx}&ch_idx=${channel_idx}&mask_val=${mask_val}`, undefined, { shallow: true })
     }
 
     function ToggleChannel() {
-        const cur = router.query.img_idx ? parseInt(router.query.img_idx) : 0
-        return (<>
-            {
-                [...Array(parseInt(metadata.channels))].map((_, i) => {
-                    var add = " or "
-                    if (i == 0) {
-                        add = " "
-                    }
-                    return <> {add}
-                        <a href={`/viewer/${name}/${file}/?img_idx=${cur}&ch_idx=${i}`}>
-                            {i + 1}
-                        </a>
-                    </>
-                })
-            } </>
-        )
+        return <ToggleVariables urlBase={`/viewer/${name}/${file}/`}
+            varName={'ch_idx'}
+            varVals={[0, 1]}
+            defaultVal={0}
+            varLabels={["1", "2"]}
+            others={['img_idx', 'mask_val']}
+            defaultVals={['0', 'unmasked']} />
     }
 
     function ToggleMasked() {
-        return (<> { (metadata.masked === true || metadata.masked3d === true) &&
-            <>
-                <> | </>
-                { masked == 'unmasked' && 
-                    <>
-                    <>unmasked</> 
-                    <>{ metadata.masked === true && <> / <a onClick={() => setMasked('mask2D')}>mask2D</a></>}</>
-                    <>{ metadata.masked3d === true && <> / <a onClick={() => setMasked('mask3D')}>mask3D</a></>}</> 
-                    </>
-                }
-                { masked == 'mask2D' &&
-                    <>
-                        <><a onClick={() => setMasked('unmasked')}>unmasked</a></>
-                        <> / mask2D</>
-                        <>{ metadata.masked3d === true && <> / <a onClick={() => setMasked('mask3D')}>mask3D</a></>}</>
-                    </>
-                }
-                { masked == 'mask3D' &&
-                    <>
-                        <><a onClick={() => setMasked('unmasked')}>unmasked</a></>
-                        <>{ metadata.masked === true && <> / <a onClick={() => setMasked('mask2D')}>mask2D</a></>}</>
-                        <> / mask3D</>
-                    </>
-                }
-            </>
-            }
-        </>
-        )
+        return <ToggleVariables urlBase={`/viewer/${name}/${file}/`}
+            varName={`mask_val`}
+            varVals={["unmasked", "mask2D", "mask3D"]}
+            defaultVal={`unmasked`}
+            varLabels={["unmasked", "2D masks", "3D masks"]}
+            others={['ch_idx', 'img_idx']}
+            defaultVals={[0, 0]} />
     }
+
+    const GalleryWrapper = styled.div`
+                .image-gallery {
+                    width: 800px;
+                    height: 800px;
+                }   
+
+                .image-gallery-slide img {
+                    width: 800px;
+                    height: 800px;
+                    object-fit: cover;
+                    overflow: hidden;
+                    object-position: center center;
+                }
+
+                .fullscreen .image-gallery-slide img {
+                    max-height: 100vh;
+                }`
 
     return (
         <Layout>
@@ -96,26 +107,25 @@ export default function Dataset({ name, file, error, metadata, images }) {
                             {name != session.user.email && <p>Shared with {session.user.email}</p>}
                             <p>
                                 {metadata.active === true && <>Active | </>}
-                                <ToggleChannel />
-                                <ToggleMasked />
+                                <ToggleChannel /> | <ToggleMasked />
                             </p>
-                            {
-
-                            }
                             {masked == 'unmasked' &&
-                                <ImageGallery items={images[chIdx].unmasked} slideDuration={50}
-                                    showPlayButton={false} showIndex={true}
+                                <GalleryWrapper><ImageGallery items={images[chIdx].unmasked}
+                                  slideDuration={50} showPlayButton={false} showIndex={true}
                                     startIndex={imgIdx} lazyLoad={true} onSlide={ourOnSlide} />
+                                </GalleryWrapper>
                             }
                             {masked == 'mask2D' &&
-                                <ImageGallery items={images[chIdx].mask2D} slideDuration={50}
+                                <GalleryWrapper><ImageGallery items={images[chIdx].mask2D} slideDuration={50}
                                     showPlayButton={false} showIndex={true}
                                     startIndex={imgIdx} lazyLoad={true} onSlide={ourOnSlide} />
+                                </GalleryWrapper>
                             }
                             {masked == 'mask3D' &&
-                                <ImageGallery items={images[chIdx].mask3D} slideDuration={50}
+                                <GalleryWrapper><ImageGallery items={images[chIdx].mask3D} slideDuration={50}
                                     showPlayButton={false} showIndex={true}
                                     startIndex={imgIdx} lazyLoad={true} onSlide={ourOnSlide} />
+                                </GalleryWrapper>
                             }
                         </>}
                         {error != 'OK' && <><p>{error}</p> </>}
