@@ -58,7 +58,7 @@ export default function ListDatasets({ datasets }) {
                         />}
                   </td>
                   <td>
-                     {elem.metadata.masked ? <Image
+                     {elem.metadata.masked || elem.metadata.masked3d ? <Image
                         src="/tick.png"
                         alt="Yes"
                         width={30}
