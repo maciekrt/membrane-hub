@@ -5,6 +5,7 @@ import Head from 'next/head'
 import Link from 'next/link'
 import { useRouter } from 'next/router'
 import { useSession, getSession } from 'next-auth/client'
+import { securityCheck } from '../../logic/security'
 
 import Layout, { siteTitle } from '../../components/layout'
 import 'react-image-gallery/styles/css/image-gallery.css'
@@ -171,11 +172,12 @@ export async function getServerSideProps(context) {
         const domainLink = name[0].split("@")[1]
 
         try {
-            if (domainMe != domainLink) {
-                throw new Error("wrong domains")
-            } else {
-                console.log("api/viewer: Security verification successful.")
-            }
+            securityCheck(name[0], session.user.email)
+            // if (domainMe != domainLink) {
+            //     throw new Error("wrong domains")
+            // } else {
+            //     console.log("api/viewer: Security verification successful.")
+            // }
             const imagesJSON = processImages(name[0], name[1])
             console.log(`api/viewer[images]: ${JSON.stringify(imagesJSON['images'])}`)
             console.log(`api/viewer: Success.`)

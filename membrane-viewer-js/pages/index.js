@@ -60,8 +60,9 @@ function useDatasetsSWR(session) {
 
 
 export default function Home() {
+  // Rule of Hooks violated here by useDatasetsSWR (session additional useSWR )
+  // Correct this!
   const [session, loading] = useSession()
-
   // Getting datasets via SWR
   const { data, error } = useDatasetsSWR(session)
   const datasets = data?.datasets

@@ -1,8 +1,6 @@
 // We can make some getSession here api is in pages 
 import { getSession } from 'next-auth/client'
-
-const securityWhitelist = ['m.zdanowicz@gmail.com', 'grzegorz.kossakowski@gmail.com', 
-    'a.magalska@nencki.edu.pl']
+import { securityCheck } from '../../../logic/security'
 
 export default async function handler(req, res) {
     const session = await getSession({ req }) 
@@ -18,11 +16,12 @@ export default async function handler(req, res) {
 
         var fs = require('fs')
         try {
-            if (domainMe != domainLink) {
-                throw new Error("wrong domains")
-            } else {
-                console.log("Image: same domains - OK.")
-            }
+            securityCheck(imagePath[0], session.user.email)
+            // if (domainMe != domainLink || securityWhitelist.indexOf(session.user.email) == -1) {
+            //     throw new Error("wrong domains")
+            // } else {
+            //     console.log("Image: same domains - OK.")
+            // }
             var buffer = fs.readFileSync(`${FOLDER}${pathImageLocal}`);
             res.setHeader('Cache-Control', 'public, must-revalidate, max-age=3155760');
             res.setHeader('Content-Type', 'image/png')

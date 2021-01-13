@@ -18,20 +18,31 @@ const fetcher = (url) => fetch(url)
 export default function Scratchpad() {
     const [session, loading] = useSession()
     const { data, error } = useSWR(`/api/scratchpadData`, fetcher, {
-        refreshInterval: 1000 }, { data: undefined, error: undefined })
+        refreshInterval: 1000
+    }, { data: undefined, error: undefined })
+
     const metadata = data?.metadata
     const images = metadata?.images
+    // Reversed copy of the images array necessary for the inverse-chronological
+    // serving of images.
     const imagesDisplay = []
-    if(!!images) {
+    if (!!images) {
         const n = images.length
-        for(var i = 0; i<n; i++) {
-            imagesDisplay.push(images[n-1-i])
+        for (var i = 0; i < n; i++) {
+            imagesDisplay.push(images[n - 1 - i])
         }
     }
     const outlines = metadata?.outlines
     const loggedIn = !!session?.user
 
+
+    /* Dropzone component
+     *
+     * Request:
+     *  uploadScratchpad
+     * */
     function StyledDropzone({ onDrop }) {
+
         const {
             getRootProps,
             getInputProps,
@@ -118,31 +129,27 @@ export default function Scratchpad() {
                 <Link href='/'>
                     <a>Go back to Home.</a>
                 </Link>
-                {/* {session &&
-                <div><Link href={`/viewer/${session.user.email}/scratchpad`}>
-                    <a>See Scratchpad Gallery</a>
-                </Link></div> } */}
             </div>
             <div>
-                {(session && !!data) && 
-                <>
-                    <StyledDropzone onDrop={onDrop} />
-                    { (images && loggedIn) &&
-                        imagesDisplay.map((image, _) =>
-                        <div className={styles.row}>
-                            <div className={styles.column}><img src={`/api/images/${session.user.email}/scratchpad/0/${image}`}
-                                width={400}
-                                height={400} />
-                            </div>
-                            <div className={styles.column}>
-                                {outlines[image] &&<img src={`/api/images/${session.user.email}/scratchpad/0/${outlines[image]}`}
-                                    width={400}
-                                    height={400} />}
-                            {!outlines[image] && <><p>Please wait..</p></>}
-                            </div>
-                        </div>)
-                    }
-                </>
+                {(session && !!data) &&
+                    <>
+                        <StyledDropzone onDrop={onDrop} />
+                        {(images && loggedIn) &&
+                            imagesDisplay.map((image, _) =>
+                                <div className={styles.row}>
+                                    <div className={styles.column}><img src={`/api/images/${session.user.email}/scratchpad/0/${image}`}
+                                        width={400}
+                                        height={400} />
+                                    </div>
+                                    <div className={styles.column}>
+                                        {outlines[image] && <img src={`/api/images/${session.user.email}/scratchpad/0/${outlines[image]}`}
+                                            width={400}
+                                            height={400} />}
+                                        {!outlines[image] && <><p>Please wait..</p></>}
+                                    </div>
+                                </div>)
+                        }
+                    </>
                 }
                 {error && <><p class="error">{error}</p></>}
             </div>
