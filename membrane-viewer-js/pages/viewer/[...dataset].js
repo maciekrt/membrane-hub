@@ -12,26 +12,33 @@ import ImageGallery from 'react-image-gallery';
 import styled from 'styled-components'
 import { processImages } from '../../logic/serverImages'
 
-function ToggleVariables({urlBase, varName, varVals, defaultVal, varLabels, others, defaultVals}) {
+// variable = { name: "...", values: [....], default: val, , labels: [] }
+// others = { names: [], default: [] }
+function ToggleVariables({urlBase, variable, others}) {
     const router = useRouter()
-    const othersValues = {}
-    const valCur = router.query[varName] ? router.query[varName] : defaultVal
+    const valCur = router.query[variable.name] 
+        ? router.query[variable.name] 
+        : variable.default
     var url = `${urlBase}?`
 
-    for(var i = 0; i<others.length; i++) {
-        var variable = others[i]
-        othersValues[variable] = router.query[variable] ? router.query[variable] : defaultVals[i]
-        url += `${variable}=${othersValues[variable]}&`
+    for(var i = 0; i<others.names.length; i++) {
+        var varName = others.names[i]
+        var varVal = router.query[varName] 
+            ? router.query[varName] 
+            : others.default[i]
+        url += `${varName}=${varVal}&`
     }
     return (
         <>{ 
-            varVals.map((val, i) => {
-                const urlTemp = `${url}${varName}=${val}`
+            variable.values.map((val, i) => {
+                const urlTemp = `${url}${variable.name}=${val}`
                 const add = (i === 0) ? "" : " / "
                 if(valCur == val) 
-                    return <>{add}{varLabels[i]}</>
+                    return <>{add}{variable.labels[i]}</>
                 else
-                    return <>{add}<Link href={urlTemp} shallow scroll={false}>{varLabels[i]}</Link></>
+                    return <>{add}<Link href={urlTemp} as={urlBase} scroll={false} shallow>
+                        {variable.labels[i]}
+                        </Link></>
             }) 
         }</>
     )
@@ -46,40 +53,51 @@ export default function Dataset({ name, file, error, metadata, images }) {
     const masked = router.query.mask_val ? router.query.mask_val : "unmasked"
 
     function ourOnSlide(idx) {
+        const baseUrl = `/viewer/${name}/${file}/`
         const channel_idx = router.query.ch_idx ? parseInt(router.query.ch_idx) : 0
         const mask_val = router.query.mask_val ? router.query.mask_val : "unmasked"
-        router.push(`/viewer/${name}/${file}/?img_idx=${idx}&ch_idx=${channel_idx}&mask_val=${mask_val}`, undefined, { shallow: true })
+        router.push(`${baseUrl}?img_idx=${idx}&ch_idx=${channel_idx}&mask_val=${mask_val}`, baseUrl, { shallow: true })
     }
 
+    // variable = { name: "...", values: [....], default: val, , labels: [] }
+// others = { names: [], default: [] }
     function ToggleChannel() {
+        const channels = [...Array(metadata.channels).keys()]
+        const labels = channels.map((_, i) => { return `${i+1}`})
         return <ToggleVariables urlBase={`/viewer/${name}/${file}/`}
-            varName={'ch_idx'}
-            varVals={[0, 1]}
-            defaultVal={0}
-            varLabels={["1", "2"]}
-            others={['img_idx', 'mask_val']}
-            defaultVals={['0', 'unmasked']} />
+            variable={{ name: "ch_idx", values: channels, default: 0, labels: labels}}
+            others={{ names: ['img_idx', 'mask_val'], default: [0, "unmasked"]}} />
     }
 
     function ToggleMasked() {
-        return <ToggleVariables urlBase={`/viewer/${name}/${file}/`}
-            varName={`mask_val`}
-            varVals={["unmasked", "mask2D", "mask3D"]}
-            defaultVal={`unmasked`}
-            varLabels={["unmasked", "2D masks", "3D masks"]}
-            others={['ch_idx', 'img_idx']}
-            defaultVals={[0, 0]} />
+        if (metadata.masked === true || metadata.masked3d === true) {
+            const vals = ["unmasked"]
+            const labels = ["unmasked"]
+            if(metadata.masked === true) {
+                vals.push("mask2D")
+                labels.push("2D masks")
+            }
+            if(metadata.masked3d === true) {
+                vals.push("mask3D")
+                labels.push("3D masks")
+            }
+            return <ToggleVariables urlBase={`/viewer/${name}/${file}/`}
+                variable={{ name: "mask_val", values: vals,
+                    default: "unmasked", labels: labels}}
+                others={{names: ["ch_idx", "img_idx"], default: [0, 0]}} />
+        }
+        return <></>
     }
 
     const GalleryWrapper = styled.div`
                 .image-gallery {
-                    width: 800px;
-                    height: 800px;
+                    min-width: 800px;
+                    min-height: 800px;
                 }   
 
                 .image-gallery-slide img {
-                    width: 800px;
-                    height: 800px;
+                    min-width: 800px;
+                    min-height: 800px;
                     object-fit: cover;
                     overflow: hidden;
                     object-position: center center;
@@ -116,13 +134,15 @@ export default function Dataset({ name, file, error, metadata, images }) {
                                 </GalleryWrapper>
                             }
                             {masked == 'mask2D' &&
-                                <GalleryWrapper><ImageGallery items={images[chIdx].mask2D} slideDuration={50}
-                                    showPlayButton={false} showIndex={true}
-                                    startIndex={imgIdx} lazyLoad={true} onSlide={ourOnSlide} />
+                                <GalleryWrapper>
+                                    <ImageGallery items={images[chIdx].mask2D} slideDuration={50}
+                                        showPlayButton={false} showIndex={true} 
+                                        startIndex={imgIdx} lazyLoad={true} onSlide={ourOnSlide} />
                                 </GalleryWrapper>
                             }
                             {masked == 'mask3D' &&
-                                <GalleryWrapper><ImageGallery items={images[chIdx].mask3D} slideDuration={50}
+                                <GalleryWrapper>
+                                    <ImageGallery items={images[chIdx].mask3D} slideDuration={50}
                                     showPlayButton={false} showIndex={true}
                                     startIndex={imgIdx} lazyLoad={true} onSlide={ourOnSlide} />
                                 </GalleryWrapper>
