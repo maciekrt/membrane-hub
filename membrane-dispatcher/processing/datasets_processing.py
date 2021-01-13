@@ -91,11 +91,11 @@ def populate_dataset(path_dataset, path_output_rendered, segmentation=False):
     )
 
 
-def add_masks(metadata):
+def add_outline(img_filename, outline_filename, metadata):
     """
     Metadata processing when masks are rendered
     """
-    pass
+    metadata['outlines'][img_filename] = outline_filename
 
 
 # path = Path("/home/ubuntu/Projects/data/images/m.zdanowicz@gmail.com/default")

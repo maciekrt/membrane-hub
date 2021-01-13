@@ -10,6 +10,7 @@ import hashlib
 from pathlib import Path
 import shutil
 from segmentation import run_segmentation
+from segmentation import run_segmentation_2d
 from processing import unzipper
 from processing import datasets_processing
 import tempfile
@@ -257,6 +258,38 @@ def trigger_segmentation_3d_after_upload(input_path_czi):
     return Path(segmentation_path_npy), Path(trace_path)
 
 
+# Remember about timeout 15m
+def trigger_outline_2d_image_after_upload(input_path_png):
+    """Computes the segmentation masks for the input .png file.
+
+    Keyword arguments:
+    input_path_czi: Path -- input path to a .czi file
+
+    Returns:
+    a path to the output segmentation .png file
+    """
+    notebook_file_name = 'run_cellpose_GPU_membrane-2d-single-image.ipynb'
+    print(f'Schedule jupyter notebook run: {notebook_file_name}')
+    notebook_path = Path('./segmentation/') / notebook_file_name
+    assert notebook_path.is_file() and notebook_path.exists, notebook_path
+    # '/home/ubuntu/Projects/data/uploads/grzegorz.kossakowski@gmail.com/FISH1_BDNF488_1_cLTP_3_CA.czi'
+    outline_file_path = run_segmentation_2d.main(notebook_path, str(input_path_png))
+    # run_segmentation.main now works with strings instead of paths!
+    return Path(outline_file_path)
+
+
+def outline_2d_adjust_metadata(path_scratchpad, path_file_image):
+    print(f"dispatcherMembrane.outline_2d_adjust_metadata: Adjusting metadata for {path_scratchpad}")
+    current_job = get_current_job()
+    job = current_job.dependency
+    path_outline = job.result
+    print(
+        f"dispatcherMembrane.outline_2d_adjust_metadata: {path_file_image} {path_outline}")
+    metadata = datasets_processing.load_metadata(path_scratchpad)
+    datasets_processing.add_outline(path_file_image.name, path_outline.name, metadata)
+    datasets_processing.save_metadata(path_scratchpad, metadata)
+
+
 # curl -F email=m.zdanowicz@gmail.com -F 'image=@/home/ubuntu/Projects/data/uploads/28.png'  localhost:5000/extend_scratchpad
 @app.route('/extend_scratchpad',  methods=['POST'])
 def extend_scratchpad():
@@ -281,10 +314,23 @@ def extend_scratchpad():
                 email / "scratchpad"
             print(f"extend_scratchpad: Saving file at {path_scratchpad}.")
             path_files = path_scratchpad / "0"
-            file.save(path_files / filename)
+            path_file_image = path_files / filename
+            file.save(path_file_image)
+            job_outline = queue_dispatcher_high.enqueue(
+                trigger_outline_2d_image_after_upload,
+                path_file_image,
+                at_front=True
+            )
             metadata = datasets_processing.load_metadata(path_scratchpad)
             datasets_processing.extend_dataset([filename], metadata)
             datasets_processing.save_metadata(path_scratchpad, metadata)
+            queue_dispatcher_high.enqueue(
+                outline_2d_adjust_metadata,
+                path_scratchpad,
+                path_file_image,
+                depends_on=job_outline,
+                at_front=True
+            )
         print(f"dispatcher.extend_scratchpad: Finished processing file.")
     return make_response(jsonify({'feedback': 'Success :)'}), 200)
 
