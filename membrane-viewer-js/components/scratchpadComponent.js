@@ -1,14 +1,20 @@
 import { useSession } from 'next-auth/client'
+import Link from 'next/link'
+import Image from 'next/image'
 
 import React, { useMemo } from 'react';
 import Dropzone from 'react-dropzone'
 import { useDropzone } from 'react-dropzone';
 import axios, { post } from 'axios';
 
-export default function Scratchpad({ scratchpadData }) {
+import styles from './scratchpadComponent.module.css'
+
+
+export default function ScratchpadComponent({ scratchpadData }) {
     const [session, loading] = useSession()
     const metadata = scratchpadData?.metadata
     const images = metadata?.images
+    const outlines = metadata?.outlines
     const loggedIn = !!session?.user
 
     const baseStyle = {
@@ -94,14 +100,23 @@ export default function Scratchpad({ scratchpadData }) {
         <div>{session &&
             <>
                 <StyledDropzone onDrop={onDrop} />
-                <p>This is your scratchpad.</p>
+                <div>
                 { (images && loggedIn) &&
-                    images.map((image, _) =>
-                        <img src={`/api/images/${session.user.email}/scratchpad/0/${image}`}
-                            width={100}
-                            height={100} />)
-
+                    images.reverse().map((image, _) =>
+                    <div className={styles.row}>
+                        <div className={styles.column}><img src={`/api/images/${session.user.email}/scratchpad/0/${image}`}
+                            width={400}
+                            height={400} />
+                        </div>
+                        <div className={styles.column}>
+                            {metadata.outlines[image] &&<img src={`/api/images/${session.user.email}/scratchpad/0/${metadata.outlines[image]}`}
+                                width={400}
+                                height={400} />}
+                        {!metadata.outlines[image] && <><p>Please wait..</p></>}
+                        </div>
+                    </div>)
                 }
+                </div>
             </>}
         </div>
     )

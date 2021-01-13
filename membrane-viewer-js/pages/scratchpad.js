@@ -6,7 +6,7 @@ import { useSession } from 'next-auth/client'
 import useSWR from 'swr'
 
 import Layout, { siteTitle } from '../components/layout'
-import Scratchpad from '../components/scratchpad'
+import ScratchpadComponent from '../components/scratchpadComponent'
 
 
 function useScratchpadSWR(session) {
@@ -35,9 +35,13 @@ export default function ScratchpadTemp() {
                 <Link href='/'>
                     <a>Go back to Home.</a>
                 </Link>
+                {/* {session &&
+                <div><Link href={`/viewer/${session.user.email}/scratchpad`}>
+                    <a>See Scratchpad Gallery</a>
+                </Link></div> } */}
             </div>
             <div>
-                <Scratchpad scratchpadData={dataScratchpad} />
+                <ScratchpadComponent scratchpadData={dataScratchpad} />
                 {errorScratchpad && <><p class="error">{errorScratchpad}</p></>}
             </div>
         </Layout>)
