@@ -71,6 +71,10 @@ export default function Home() {
     <Layout>
       <Head>
         <title>{siteTitle}</title>
+        <meta name="description" content="Data Membrane is a platform for sharing and processing biological imaging" />
+        <meta name="og:url" content="https://hub.membrane.computer" />
+        <meta name="og:title" content="Membrane Hub" />
+        <meta name="og:image" content="/public/opengraph.png" />
       </Head>
       <div><Messaging /></div>
       <div className={utilStyles.grid}>
