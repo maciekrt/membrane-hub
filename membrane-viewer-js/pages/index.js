@@ -70,11 +70,13 @@ export default function Home() {
   return (
     <Layout>
       <Head>
-        <title>{siteTitle}</title>
-        <meta name="description" content="Data Membrane is a platform for sharing and processing biological imaging" />
-        <meta name="og:url" content="https://hub.membrane.computer" />
-        <meta name="og:title" content="Membrane Hub" />
-        <meta name="og:image" content="/public/opengraph.png" />
+        {/* <title>{siteTitle}</title> */}
+        <meta property="og:title" content="Membrane Hub" />
+        <meta property="og:url" content="https://hub.membrane.computer" />
+        <meta property="og:image" content="https://hub.membrane.computer/opengraph.png" />
+        <meta property="og:type" content="website" />
+        <meta property="og:description" content="Data Membrane is a platform for sharing and processing biological imaging" />
+        <meta property="fb:app_id" content="180061987205320" />
       </Head>
       <div><Messaging /></div>
       <div className={utilStyles.grid}>

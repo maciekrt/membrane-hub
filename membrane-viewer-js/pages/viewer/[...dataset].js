@@ -1,7 +1,6 @@
 import React from 'react'
 import { useState } from 'react'
 
-import Head from 'next/head'
 import Link from 'next/link'
 import { useRouter } from 'next/router'
 import { useSession, getSession } from 'next-auth/client'
@@ -12,6 +11,8 @@ import 'react-image-gallery/styles/css/image-gallery.css'
 import ImageGallery from 'react-image-gallery';
 import styled from 'styled-components'
 import { processImages } from '../../logic/serverImages'
+
+import Headers from './headers'
 
 // variable = { name: "...", values: [....], default: val, , labels: [] }
 // others = { names: [], default: [] }
@@ -47,7 +48,6 @@ function ToggleVariables({urlBase, variable, others}) {
 
 export default function Dataset({ name, file, error, metadata, images }) {
     const [session, loading] = useSession()
-    // var [masked, setMasked] = useState('unmasked')
     const router = useRouter()
     const imgIdx = router.query.img_idx ? parseInt(router.query.img_idx) : 0
     const chIdx = router.query.ch_idx ? parseInt(router.query.ch_idx) : 0
@@ -110,9 +110,7 @@ export default function Dataset({ name, file, error, metadata, images }) {
 
     return (
         <Layout>
-            <Head>
-                <title>{siteTitle}</title>
-            </Head>
+            <Headers name={name} file={file} />
             <div>
                 <Link href='/'>
                     <a>Go back to Home.</a>
