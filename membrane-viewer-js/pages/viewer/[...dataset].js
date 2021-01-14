@@ -163,23 +163,12 @@ export async function getServerSideProps(context) {
     var name = context.params.dataset
 
     console.log(`api/viewer: Working on ${name.join('/')}`)
-
     if (session) {
-        console.log(`api/viewer: Security check for ${session.user.email} ${name[0]}`)
-        // Those two are necessary for our current security policy.
-        // Should be replaced by some honest security module.
-        const domainMe = session.user.email.split("@")[1]
-        const domainLink = name[0].split("@")[1]
-
         try {
             securityCheck(name[0], session.user.email)
-            // if (domainMe != domainLink) {
-            //     throw new Error("wrong domains")
-            // } else {
-            //     console.log("api/viewer: Security verification successful.")
-            // }
+
             const imagesJSON = processImages(name[0], name[1])
-            console.log(`api/viewer[images]: ${JSON.stringify(imagesJSON['images'])}`)
+            // console.log(`api/viewer[images]: ${JSON.stringify(imagesJSON['images'])}`)
             console.log(`api/viewer: Success.`)
             return {
                 props: {
