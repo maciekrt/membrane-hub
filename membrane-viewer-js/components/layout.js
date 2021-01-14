@@ -12,7 +12,7 @@ export default function Layout({children}) {
         <h1 className={styles.title}>
           Membrane Hub
         </h1>
-        <p className={styles.description}}>
+        <p className={styles.description}>
           To infinity and beyond! - Buzz Lightyear 🚀🚀
         </p>
       </header>
