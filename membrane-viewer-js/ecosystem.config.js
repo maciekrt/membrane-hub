@@ -2,7 +2,7 @@
 module.exports = {
   apps: [{
     name: "Membrane Hub",
-    script: "./run.sh",
+    script: "npm run start -- -p 3000",
     env: {
       NODE_ENV: "development",
     },
