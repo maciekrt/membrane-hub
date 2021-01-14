@@ -26,7 +26,7 @@ export default function ListDatasets({ datasets }) {
       <table className={styles.styleTable}>
          <thead>
             <tr>
-               <th>Dataset name</th>
+               <th>Dataset</th>
                <th>Ready</th>
                <th>Segmented</th>
                <th>Algorithm</th>
