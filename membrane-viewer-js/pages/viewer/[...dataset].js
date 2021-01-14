@@ -183,6 +183,12 @@ export async function getServerSideProps(context) {
         }
     } else {
         console.log('api/viewer: Not logged in..')
-        return { props: { error: "Not logged in" } }
+        return {
+            props: {
+                error: "Not logged in",
+                name: name[0],
+                file: name[1] 
+            }
+        }
     }
 }
