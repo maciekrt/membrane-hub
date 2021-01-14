@@ -21,6 +21,9 @@ jobs:
       with:
         node-version: ${{ matrix.node-version }}
 
+    - run: cd membrane-dispatcher && cp -r ../../../../../secrets .
+    - run: cd membrane-viewer-js && cp -r ../../../../../configs/.env.local .
+    - run: cd membrane-dispatcher && cp -r ../../../../../configs/config.py .
     - run: cd membrane-viewer-js && npm install
     - run: cd membrane-viewer-js && npm run build
     - run: cd membrane-viewer-js && pm2 reload ecosystem.config.js
