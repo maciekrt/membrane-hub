@@ -26,11 +26,11 @@ export default function ListDatasets({ datasets }) {
       <table className={styles.styleTable}>
          <thead>
             <tr>
-               <th>Dataset</th>
+               <th>Dataset Name</th>
                <th>Ready</th>
                <th>Segmented</th>
                <th>Algorithm</th>
-               <th>Channels</th>
+               <th>Channel list</th>
             </tr>
          </thead>
          <tbody>
