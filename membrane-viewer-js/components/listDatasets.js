@@ -71,8 +71,8 @@ export default function ListDatasets({ datasets }) {
                         />}
                   </td>
                   <td>
-                     { elem.metadata.masked && <p>2D algor.</p> }
-                     { elem.metadata.masked3d && <p>3D algor.</p> }
+                     { elem.metadata.masked && <p>2D algorithm!</p> }
+                     { elem.metadata.masked3d && <p>3D algorithm!</p> }
                   </td>
                   <td>
                      { elem.metadata.active === true &&
