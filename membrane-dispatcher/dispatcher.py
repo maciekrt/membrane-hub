@@ -16,7 +16,7 @@ from processing import datasets_processing
 import tempfile
 import os
 import logging
-
+from rendererMembrane import func
 
 logger = logging.getLogger('dispatcher')
 logger.setLevel(logging.DEBUG)
@@ -423,6 +423,14 @@ def segmentation():
             job_timeout='15m'
         )
     return jsonify({'result': 'SCHEDULED'})
+
+
+@app.route('/test_rendering',  methods=['POST'])
+def segmentation():
+    if request.method == 'POST':
+        func()
+    return jsonify({'result': 'SCHEDULED'})
+
 
 
 @app.route('/')
