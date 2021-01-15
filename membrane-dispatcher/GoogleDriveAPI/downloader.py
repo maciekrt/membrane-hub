@@ -58,7 +58,7 @@ def download_file(token_path, credentials_path, url, output_folder):
     if token_path.exists():
         with open(str(token_path), 'rb') as token:
             creds = pickle.load(token)
-        logger.info("Credentials successfully loaded.")
+        logger.info("Credentials successfully loaded :)")
     else:
         logger.warning("Credentials not loaded..")
     # If there are no (valid) credentials available, let the user log in.
