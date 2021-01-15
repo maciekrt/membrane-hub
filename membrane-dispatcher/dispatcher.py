@@ -15,11 +15,30 @@ from processing import unzipper
 from processing import datasets_processing
 import tempfile
 import os
+import logging
+
+
+logger = logging.getLogger('dispatcher')
+logger.setLevel(logging.DEBUG)
+formatter = logging.Formatter(
+    '%(asctime)s | %(levelname)-8s | %(name)s.%(funcName)s: %(message)s')
+# FileHandler for logging
+fh = logging.FileHandler('/home/ubuntu/membrane-hub/logs/dispatcher.log')
+fh.setLevel(logging.DEBUG)
+fh.setFormatter(formatter)
+logger.addHandler(fh)
+# Console for logging
+ch = logging.StreamHandler()
+ch.setLevel(logging.DEBUG)
+ch.setFormatter(formatter)
+logger.addHandler(ch)
+
 
 from flask import Flask, jsonify, make_response, flash, request, redirect, url_for
 from werkzeug.utils import secure_filename
 app = Flask(__name__)
 app.config.from_pyfile('config.py')
+
 
 redis_conn = Redis()
 QUEUE_NAME_HIGH = app.config['QUEUE_NAME']
@@ -41,21 +60,21 @@ def process_download(email):
     current_job = get_current_job()
     job = current_job.dependency
     path_downloaded = job.result
-    print(f"process_download[path_downloaded]: {path_downloaded}")
+    logger.info(f"Processing {path_downloaded}.")
     if path_downloaded.suffix == '.zip':
         path_unzipped = path_downloaded.parent / path_downloaded.stem
-        print(f"process_download: Unzipping .zip file into {path_unzipped}")
+        logger.info(f"Unzipping .zip file into {path_unzipped}.")
         unzipper.unzip_dataset(
             path_downloaded,
             path_unzipped
         )
         list_files.extend(unzipper.recurse_dataset(path_unzipped))
-        print(f"process_download[list_files]: {list_files}")
+        logger.debug(f"list_files: {list_files}")
     elif path_downloaded.suffix in ['.czi', '.lsm']:
-        print(f"process_download: Processing {path_downloaded.suffix} file.")
+        logger.info(f"Processing {path_downloaded.suffix} file.")
         list_files.extend([path_downloaded])
     else:
-        print("What's happening here, mate!?")
+        logger.warning("What's happening here, mate!?")
     for file_path in list_files:
         generate_metadata(file_path, email)
         queue_dispatcher_high.enqueue(
@@ -104,7 +123,7 @@ def generate_metadata(file_path, email):
     file_path: Path -- Path to the image file
     email: str -- ..
     """
-    print(f"dispatcher.generate_metadata[file_path]: {file_path}")
+    logger.info(f"Generating metadata for {file_path}")
     renderer = ImageRenderer(file_path, None)
     image_data = renderer.prepare_canvas()
     path_dataset = Path(app.config['IMAGESPATH']) / email / file_path.name
@@ -127,10 +146,9 @@ def render_image(file_path, email):
     email: str -- ..
     """
     # Path(app.config['IMAGESPATH']) / email / file.name
-    print(f"dispatcher.render_image[file_path]: {file_path}")
+    logger.info(f"Processing 3D set {file_path}")
     renderer = ImageRenderer(file_path, None)
     image_data = renderer.prepare_canvas()
-    print(f"dispatcher.render_image: Processing 3D set")
     path_dataset = Path(app.config['IMAGESPATH']) / email / file_path.name
     rendering_output = renderer.render(
         rendering_mode='image only',
@@ -145,7 +163,7 @@ def render_image(file_path, email):
         path_dataset, rendered_output_path, segmentation=False)
     metadata['active'] = True
     datasets_processing.save_metadata(path_dataset, metadata)
-    print("dispatcher.render_image: Done.")
+    logger.info("Done.")
 
 
 # TODO Write docstring here
@@ -155,13 +173,11 @@ def render_segmentation(source_image_path, email, mode="mask 2D"):
     source_image_path: Path -- ..
     email: str -- ..
     """
-    print(f"dispatcher.render_segmentation: Rendering segmentation in mode {mode}."
-          f"for {source_image_path}.")
+    logger.info(f"Rendering segmentation in mode {mode} for {source_image_path}.")
     current_job = get_current_job()
     job = current_job.dependency
     segmentation_path, trace_path = job.result
-    print(
-        f"dispatcher.render_segmentation: The masks are in {segmentation_path}.")
+    logger.info(f"The masks are in {segmentation_path}.")
     renderer = ImageRenderer(source_image_path, segmentation_path)
     image_data = renderer.prepare_canvas()
     rendered_output = renderer.render(
@@ -172,9 +188,8 @@ def render_segmentation(source_image_path, email, mode="mask 2D"):
     rendered_output_path = rendered_output['output_path']
     path_dataset = Path(app.config['IMAGESPATH']) / \
         email / source_image_path.name
-    print(
-        f"dispatcher.render_segmentation: Copying masks from {rendered_output_path} "
-        f"to {path_dataset}.")
+    logger.info(
+        f"Copying masks from {rendered_output_path} to {path_dataset}.")
     datasets_processing.populate_dataset(
         path_dataset,
         rendered_output_path,
@@ -183,8 +198,7 @@ def render_segmentation(source_image_path, email, mode="mask 2D"):
     segmentation_output_path = Path(
         app.config['SEGMENTATIONPATH']) / email / trace_path.name
     print(
-        f"dispatcher.render_segmentation: Copying segmentation trace from {trace_path} "
-        f"to {segmentation_output_path}")
+        f"Copying segmentation trace from {trace_path} to {segmentation_output_path}.")
     shutil.copy(trace_path, segmentation_output_path)
     # Setting masks to true, however without activation
     metadata = datasets_processing.load_metadata(path_dataset)
@@ -197,7 +211,7 @@ def render_segmentation(source_image_path, email, mode="mask 2D"):
 
 # TODO Write docstring here
 def initialize(path_result, url):
-    print(f"initialize: {path_result} {url}")
+    logger.info(f"Initializing {path_result} {url}.")
     hashed_name = hashlib.sha224(url.encode('utf-8')).hexdigest()
     path = path_result / hashed_name
     path.mkdir(exist_ok=True)
@@ -223,7 +237,7 @@ def trigger_segmentation_after_upload(input_path_czi):
     a path to the output segmentation .npy file
     """
     notebook_file_name = 'run_cellpose_GPU_membrane.ipynb'
-    print(f'Schedule jupyter notebook run: {notebook_file_name}')
+    logger.info(f"Schedule jupyter notebook run: {notebook_file_name}.")
     notebook_path = Path('./segmentation/') / notebook_file_name
     assert notebook_path.is_file() and notebook_path.exists, notebook_path
     basedir_out = tempfile.mkdtemp()
@@ -245,7 +259,7 @@ def trigger_segmentation_3d_after_upload(input_path_czi):
     a path to the output segmentation .npy file
     """
     notebook_file_name = 'run_cellpose_GPU_membrane_3d.ipynb'
-    print(f'Schedule jupyter notebook run: {notebook_file_name}')
+    logger.info(f"Schedule jupyter notebook run: {notebook_file_name}")
     notebook_path = Path('./segmentation/') / notebook_file_name
     assert notebook_path.is_file() and notebook_path.exists, notebook_path
     basedir_out = tempfile.mkdtemp()
@@ -269,7 +283,7 @@ def trigger_outline_2d_image_after_upload(input_path_png):
     a path to the output segmentation .png file
     """
     notebook_file_name = 'run_cellpose_GPU_membrane-2d-single-image.ipynb'
-    print(f'Schedule jupyter notebook run: {notebook_file_name}')
+    logger.info(f"Schedule jupyter notebook run: {notebook_file_name}")
     notebook_path = Path('./segmentation/') / notebook_file_name
     assert notebook_path.is_file() and notebook_path.exists, notebook_path
     # '/home/ubuntu/Projects/data/uploads/grzegorz.kossakowski@gmail.com/FISH1_BDNF488_1_cLTP_3_CA.czi'
@@ -279,12 +293,11 @@ def trigger_outline_2d_image_after_upload(input_path_png):
 
 
 def outline_2d_adjust_metadata(path_scratchpad, path_file_image):
-    print(f"dispatcherMembrane.outline_2d_adjust_metadata: Adjusting metadata for {path_scratchpad}")
+    logger.info(f"Adjusting metadata for {path_scratchpad}.")
     current_job = get_current_job()
     job = current_job.dependency
     path_outline = job.result
-    print(
-        f"dispatcherMembrane.outline_2d_adjust_metadata: {path_file_image} {path_outline}")
+    logger.debug(f"path_file_image={path_file_image} path_outline={path_outline}.")
     metadata = datasets_processing.load_metadata(path_scratchpad)
     datasets_processing.add_outline(path_file_image.name, path_outline.name, metadata)
     datasets_processing.save_metadata(path_scratchpad, metadata)
@@ -294,25 +307,19 @@ def outline_2d_adjust_metadata(path_scratchpad, path_file_image):
 @app.route('/extend_scratchpad',  methods=['POST'])
 def extend_scratchpad():
     if request.method == 'POST':
-        print(f"dispatcher.extend_scratchpad: Extending scratchpad.")
-        print(f"headers: {request.headers}")
-        print(f"form: {request.form}")
-        print(f"data: {request.data}")
-
         if 'file' not in request.files:
-            print("dispatcher.extend_scratchpad: No file in files.")
+            logger.warning("No file in files.")
             return make_response(jsonify({'feedback': 'Error: no files here :/'}), 401)
         else:
             # Add a file to the scratchpad
-            print("dispatcher.extend_scratchpad: file is present.")
+            logger.debug("File is present.")
             file = request.files['file']
             email = request.form['email']
-            print(f"dispatcher.extend_scratchpad[filename]: {file.filename}")
-            print(f"dispatcher.extend_scratchpad[email]: {email}")
+            logger.info(f"Processing {file.filename} from {email}.")
             filename = secure_filename(file.filename)
             path_scratchpad = Path(app.config['IMAGESPATH']) / \
                 email / "scratchpad"
-            print(f"extend_scratchpad: Saving file at {path_scratchpad}.")
+            logger.info(f"Saving file at {path_scratchpad}.")
             path_files = path_scratchpad / "0"
             path_file_image = path_files / filename
             file.save(path_file_image)
@@ -331,28 +338,29 @@ def extend_scratchpad():
                 depends_on=job_outline,
                 at_front=True
             )
-        print(f"dispatcher.extend_scratchpad: Finished processing file.")
+        logger.info(f"Finished processing file.")
     return make_response(jsonify({'feedback': 'Success :)'}), 200)
 
 
 # Try this up using the following (be careful that's a 20GB file)
 # json='{"url": "https://drive.google.com/file/d/1mtHLzrfkmJc6MpDbw8qux5L3Z7poWkRQ/view?usp=sharing", "email": "m.zdanowicz@gmail.com", "gdrive": true}'; curl -d "$json" -H 'Content-Type: application/json' localhost:5001/send
-# Alternative test with small.czi (6 .czi files zipped together) 
-# https://drive.google.com/file/d/1aui6RFMQakxBzZ1E0GB-UKGlu0CNwnSS/view?usp=sharing
+# Alternative test with small.czi (6 .czi files zipped together)
+# json='{"url": "https://drive.google.com/file/d/1aui6RFMQakxBzZ1E0GB-UKGlu0CNwnSS/view?usp=sharing", "email": "m.zdanowicz@gmail.com", "gdrive": true}'; curl -d "$json" -H 'Content-Type: application/json' localhost:5001/send
 @app.route('/send',  methods=['POST'])
 def send():
     if request.method == 'POST':
         content = request.json
-        print("send: Downloading the file..")
-        print(f"send[url]: {content['url']}")
-        print(f"send[gdrive]: {content['gdrive']}")
-        print(f"send[email]: {content['email']}")
+        logger.info("Downloading the file..")
+        logger.debug(f"url= {content['url']}")
+        logger.debug(f"gdrive={content['gdrive']}")
+        logger.debug(f"email={content['email']}")
         hashed_name = initialize(
             Path(app.config['IMAGESPATH']) / content['email'],
             content['url'])
         # Result ttl set high because the data is necessary for the process_download
         # which might happen later down the road (e.g., a lot of segmentations from
         # other process). Should be adjusted once queues are prioritized
+        logger.info(f"Starting the download..")
         job_download = queue_dispatcher_high.enqueue(
             downloader.download_file,
             Path(app.config['TOKENPATH']),

@@ -2,6 +2,7 @@ import pickle
 import os.path
 import argparse
 import io
+import time
 import sys
 from pathlib import Path
 import json
@@ -12,8 +13,21 @@ from googleapiclient.discovery import build
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
 from googleapiclient.http import MediaIoBaseDownload
-
 from googleapiclient.errors import HttpError
+
+import logging
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+formatter = logging.Formatter(
+    '%(asctime)s | %(levelname)-8s | %(name)s.%(funcName)s: %(message)s')
+# FileHandler for logging
+fh = logging.FileHandler('/home/ubuntu/membrane-hub/logs/downloader.log')
+fh.setFormatter(formatter)
+logger.addHandler(fh)
+ch = logging.StreamHandler()
+ch.setLevel(logging.DEBUG)
+ch.setFormatter(formatter)
+logger.addHandler(ch)
 
 # If modifying these scopes, delete the file token.pickle.
 SCOPES = ['https://www.googleapis.com/auth/drive.metadata.readonly',
@@ -44,7 +58,9 @@ def download_file(token_path, credentials_path, url, output_folder):
     if token_path.exists():
         with open(str(token_path), 'rb') as token:
             creds = pickle.load(token)
-        print("download_file: Credentials successfully loaded.")
+        logger.info("Credentials successfully loaded.")
+    else:
+        logger.warning("Credentials not loaded..")
     # If there are no (valid) credentials available, let the user log in.
     if not creds or not creds.valid:
         if creds and creds.expired and creds.refresh_token:
@@ -66,25 +82,31 @@ def download_file(token_path, credentials_path, url, output_folder):
     output_path = output_folder / file['name']
     fh = io.FileIO(output_path, 'wb')
     downloader = MediaIoBaseDownload(fh, request)
-    print(f"download_file[file_name]: {file['name']}.")
-    print(f"download_file[file_id]: {file_id}.")
+    logger.info(f"file_name={file['name']}.")
+    logger.info(f"file_id={file_id}.")
 
     # Take a look here: /home/ubuntu/miniconda3/envs/google-drive/lib/python3.8/site-packages/googleapiclient
     done = False
-    print(f"download_file: Downloading started..")
-    with tqdm(total=100) as pbar:
-        while done is False:
-            try:
-                status, done = downloader.next_chunk(num_retries=5)
-                progress = int(status.progress() * 100)
-                pbar.n = progress
-                pbar.refresh()
-            except HttpError as err:
-                print(f"HttpError: {err}")
-                fh.close()
-                raise err
-        print(f"download_file: Download successful.")
-        fh.close()
+    logger.info(f"Downloading started..")
+    # with tqdm(total=100) as pbar:
+    # progress = 0
+    while done is False:
+        try:
+            logger.info(f"Trying to get a chunk..")
+            status, done = downloader.next_chunk(num_retries=5)
+            progress = int(status.progress() * 100)
+            logger.info(f"Downloaded {progress}%.")
+            # pbar.n = progress
+            # pbar.refresh()
+        except HttpError as err:
+            logger.error(f"HttpError: {err}")
+            fh.close()
+            raise err
+        except:
+            logger.error("Unhandled exceptions..")
+            fh.close()
+    logger.info(f"Download successful.")
+    fh.close()
     return output_path
 
 
