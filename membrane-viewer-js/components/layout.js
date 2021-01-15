@@ -13,7 +13,7 @@ export default function Layout({children}) {
           Membrane Hub
         </h1>
         <p className={styles.description}>
-          To infinity and beyond! - Buzz Lightyear 🚀
+          To infinity and beyond! - Buzz Lightyear 🚀🚀
         </p>
       </header>
 

@@ -70,7 +70,7 @@ export default function Home() {
   return (
     <Layout>
       <Head>
-        {/* <title>{siteTitle}</title> */}
+        <title>{siteTitle}</title>
         <meta property="og:title" content="Membrane Hub" />
         <meta property="og:url" content="https://hub.membrane.computer" />
         <meta property="og:image" content="https://hub.membrane.computer/opengraph.png" />
