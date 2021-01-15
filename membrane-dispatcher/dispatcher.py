@@ -429,7 +429,7 @@ def segmentation():
 def test_rendering():
     if request.method == 'POST':
         func()
-    return jsonify({'result': 'SCHEDULED'})
+    return jsonify({'result': 'SCHEDULED_Rendering_Test'})
 
 
 @app.route('/')
