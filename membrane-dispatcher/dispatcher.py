@@ -428,7 +428,7 @@ def segmentation():
 @app.route('/test_rendering',  methods=['POST'])
 def test_rendering():
     if request.method == 'POST':
-        func()
+        queue_dispatcher_high.enqueue(func)
     return jsonify({'result': 'SCHEDULED_Rendering_Test'})
 
 

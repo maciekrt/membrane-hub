@@ -217,7 +217,7 @@ class ImageRenderer(object):
 
 def func():
     path_file = Path(
-        "/home/ubuntu/Projects/data/uploads/manual-zip-download/FISH_BDNF_romi_CA/FISH1_BDNF488_10_DMSO_romi_4_CA.czi")
+        "/home/ubuntu/Projects/data/uploads/m.zdanowicz@gmail.com/FISH1_BDNF488_1_cLTP_1_CA.czi")
     path_mask = Path(
         "/home/ubuntu/tmp/masks_2D_stitched_FISH1_BDNF488_10_DMSO_romi_4_CA.npy")
     path_result = Path("/home/ubuntu/Projects/data/images/example/")
