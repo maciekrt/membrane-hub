@@ -57,7 +57,7 @@ export default function Dataset({ name, file, error, metadata, images }) {
         const baseUrl = `/viewer/${name}/${file}/`
         const channel_idx = router.query.ch_idx ? parseInt(router.query.ch_idx) : 0
         const mask_val = router.query.mask_val ? router.query.mask_val : "unmasked"
-        router.push(`${baseUrl}?img_idx=${idx}&ch_idx=${channel_idx}&mask_val=${mask_val}`, baseUrl, { shallow: true })
+        router.push(`${baseUrl}?img_idx=${idx}&ch_idx=${channel_idx}&mask_val=${mask_val}`, { shallow: true })
     }
 
     // variable = { name: "...", values: [....], default: val, , labels: [] }
