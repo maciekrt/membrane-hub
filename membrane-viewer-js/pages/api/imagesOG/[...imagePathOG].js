@@ -9,7 +9,7 @@ export default async function handler(req, res) {
         res.end(null)
     } else {
         const userEmail = imagePathOG[0]
-        const dataset = imagePatOG[1]
+        const dataset = imagePathOG[1]
         const channelIdx = parseInt(imagePathOG[2])
         const maskFlag = imagePathOG[3]
         var fs = require('fs')
@@ -27,8 +27,8 @@ export default async function handler(req, res) {
                 default:
                     throw "Wrong path"
             }
-            var buffer = fs.readFileSync(
-                `${FOLDER}${userEmail}/${dataset}/${channelIdx}/20${add}_x1.png`);
+            var ogPath = `${FOLDER}${userEmail}/${dataset}/${channelIdx}/20${add}_x1.png`
+            var buffer = fs.readFileSync(ogPath);
             res.setHeader('Cache-Control', 'public, must-revalidate, max-age=3155760');
             res.setHeader('Content-Type', 'image/png')
             res.status(200).send(buffer)
