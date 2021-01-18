@@ -38,7 +38,7 @@ function ToggleVariables({urlBase, variable, others}) {
                 if(valCur == val) 
                     return <>{add}{variable.labels[i]}</>
                 else
-                    return <>{add}<Link href={urlTemp} as={urlBase} scroll={false} shallow>
+                    return <>{add}<Link href={urlTemp} as={urlTemp} scroll={false} shallow>
                         {variable.labels[i]}
                         </Link></>
             }) 
@@ -110,7 +110,7 @@ export default function Dataset({ name, file, error, metadata, images }) {
 
     return (
         <Layout>
-            <Headers name={name} file={file} />
+            <Headers name={name} file={file} channelIdx={chIdx} masked={masked} />
             <div>
                 <Link href='/'>
                     <a>Go back to Home.</a>
