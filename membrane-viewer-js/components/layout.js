@@ -19,21 +19,13 @@ export default function Layout({children}) {
 
       <main> {children} </main>
 
-      <footer className={styles.footer}>
+      {/* <footer className={styles.footer}> */}
         {/* <div className={styles.backToHome}>
           <Link href="/">
             <a>← Back to home</a>
           </Link>
         </div> */}
-        <div>
-          <a href="https://vercel.com?utm_source=create-next-app&utm_medium=default-template&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer" >     
-            Powered by{' '}
-            <img src="/vercel.svg" alt="Vercel Logo" className="logo" />
-          </a>
-        </div>
-      </footer>
+      {/* </footer> */}
 
     </div>
   )
