@@ -12,6 +12,8 @@ import ImageGallery from 'react-image-gallery';
 import styled from 'styled-components'
 import { processImages } from '../../logic/serverImages'
 
+import Head from 'next/head'
+
 import Headers from './headers'
 
 // variable = { name: "...", values: [....], default: val, , labels: [] }
@@ -116,6 +118,9 @@ export default function Dataset({ name, file, error, metadata, images }) {
     return (
         <Layout>
             <Headers name={name} file={file} channelIdx={chIdx} masked={masked} />
+            <Head>
+                <title>{file}</title>
+            </Head>
             <div>
                 <Link href='/'>
                     <a>Go back to Home.</a>
