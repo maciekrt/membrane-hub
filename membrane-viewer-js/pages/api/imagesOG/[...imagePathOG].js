@@ -12,8 +12,12 @@ export default async function handler(req, res) {
         const dataset = imagePathOG[1]
         const channelIdx = parseInt(imagePathOG[2])
         const maskFlag = imagePathOG[3]
+
         var fs = require('fs')
         try {
+            const metadataFile = fs.readFileSync(`${FOLDER}${userEmail}/${dataset}/metadata.json`)
+            // This a metadata file for the dataset
+            const metadata = JSON.parse(metadataFile)
             var add = ""
             switch(maskFlag) {
                 case "unmasked":
@@ -27,7 +31,8 @@ export default async function handler(req, res) {
                 default:
                     throw "Wrong path"
             }
-            var ogPath = `${FOLDER}${userEmail}/${dataset}/${channelIdx}/20${add}_x1.png`
+            const imgIdx = Math.floor(metadata.z / 2);
+            var ogPath = `${FOLDER}${userEmail}/${dataset}/${channelIdx}/${imdIdx}${add}_x1.png`
             var buffer = fs.readFileSync(ogPath);
             res.setHeader('Cache-Control', 'public, must-revalidate, max-age=3155760');
             res.setHeader('Content-Type', 'image/png')
