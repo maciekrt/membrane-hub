@@ -80,7 +80,7 @@ def process_download(email):
 
         if email == 'grzegorz.kossakowski@gmail.com':
             logger.warn('Not scheduling any jobs for grzegorz.kossakowski@gmail.com after the download. This is done just for demo purposes only.')
-            return
+            break
 
         queue_dispatcher_high.enqueue(
             render_image,
