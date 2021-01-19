@@ -3,6 +3,10 @@ from pathlib import Path
 import hashlib
 import shutil
 
+import logging
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+
 
 """
 Here's some information about metadata.json for a dataset (i.e. a folder in images)

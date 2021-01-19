@@ -1,3 +1,5 @@
+from werkzeug.utils import secure_filename
+from flask import Flask, jsonify, make_response, flash, request, redirect, url_for
 from rendererMembrane import ImageRenderer
 from rq import Queue, Retry, get_current_job
 from redis import Redis
@@ -34,8 +36,6 @@ ch.setFormatter(formatter)
 logger.addHandler(ch)
 
 
-from flask import Flask, jsonify, make_response, flash, request, redirect, url_for
-from werkzeug.utils import secure_filename
 app = Flask(__name__)
 app.config.from_pyfile('config.py')
 
@@ -77,10 +77,17 @@ def process_download(email):
         logger.warning("What's happening here, mate!?")
     for file_path in list_files:
         generate_metadata(file_path, email)
-        queue_dispatcher_high.enqueue(
+        render_job = queue_dispatcher_high.enqueue(
             render_image,
             file_path,
             email
+        )
+        queue_dispatcher_high.enqueue(
+            finalize_render,
+            file_path,
+            email,
+            depends_on=render_job,
+            at_front=True
         )
         # Result ttl set high because the data is necessary for render_segmentation
         # which might happen later down the road (e.g., a lot of segmentations from
@@ -92,11 +99,27 @@ def process_download(email):
             result_ttl=86400
         )
         queue_dispatcher_high.enqueue(
+            finalize_segmentation,
+            file_path,
+            email,
+            mode="mask 2D",  # Important this is
+            depends_on=segmentation_job,
+            at_front=True
+        )
+        segmentation_render_job = queue_dispatcher_high.enqueue(
             render_segmentation,
             file_path,
             email,
-            mode="mask 2D",  # Important this is 
+            mode="mask 2D",  # Important this is
             depends_on=segmentation_job
+        )
+        queue_dispatcher_high.enqueue(
+            finalize_rendering_segmentation,
+            file_path,
+            email,
+            mode="mask 2D",  # Important this is
+            depends_on=segmentation_render_job,
+            at_front=True
         )
         # Doing a similar job for a 3D segmentation
         segmentation_3d_job = queue_dispatcher_default.enqueue(
@@ -106,11 +129,27 @@ def process_download(email):
             result_ttl=86400
         )
         queue_dispatcher_high.enqueue(
+            finalize_segmentation,
+            file_path,
+            email,
+            mode="mask 3D",  # Important this is
+            depends_on=segmentation_3d_job,
+            at_front=True
+        )
+        segmentation_render_3d_job = queue_dispatcher_high.enqueue(
             render_segmentation,
             file_path,
             email,
             mode="mask 3D",
             depends_on=segmentation_3d_job
+        )
+        queue_dispatcher_high.enqueue(
+            finalize_rendering_segmentation,
+            file_path,
+            email,
+            mode="mask 3D",  # Important this is
+            depends_on=segmentation_render_3d_job,
+            at_front=True
         )
 
 
@@ -132,7 +171,7 @@ def generate_metadata(file_path, email):
         z=image_data['z'],
         channels=image_data['channels'],
         dims="3D",
-        source = str(file_path)
+        source=str(file_path)
     )
 
 
@@ -155,6 +194,27 @@ def render_image(file_path, email):
         scales=[1],
         sizes=[(100, 100)]
     )
+    return rendering_output
+    # rendered_output_path = rendering_output['output_path']
+    # rendered_z = rendering_output['z']
+    # metadata = datasets_processing.load_metadata(path_dataset)
+    # assert metadata['z'] == rendered_z
+    # datasets_processing.populate_dataset(
+    #     path_dataset, rendered_output_path, segmentation=False)
+    # metadata['active'] = True
+    # datasets_processing.save_metadata(path_dataset, metadata)
+    # logger.info("Done.")
+
+
+def finalize_render(file_path, email):
+    """ Finalizing render. Copying the render from rendering_output (temp directory)
+        to the datasets' directory.  Deleting the temp directory.
+    """
+    logger.info(f"Finalizing rendering of {file_path}.")
+    current_job = get_current_job()
+    job = current_job.dependency
+    rendering_output = job.result
+    path_dataset = Path(app.config['IMAGESPATH']) / email / file_path.name
     rendered_output_path = rendering_output['output_path']
     rendered_z = rendering_output['z']
     metadata = datasets_processing.load_metadata(path_dataset)
@@ -163,6 +223,8 @@ def render_image(file_path, email):
         path_dataset, rendered_output_path, segmentation=False)
     metadata['active'] = True
     datasets_processing.save_metadata(path_dataset, metadata)
+    # Deleting the temp directory containing the render
+    shutil.rmtree(str(rendered_output_path), ignore_errors=True)
     logger.info("Done.")
 
 
@@ -173,7 +235,8 @@ def render_segmentation(source_image_path, email, mode="mask 2D"):
     source_image_path: Path -- ..
     email: str -- ..
     """
-    logger.info(f"Rendering segmentation in mode {mode} for {source_image_path}.")
+    logger.info(
+        f"Rendering segmentation in mode {mode} for {source_image_path}.")
     current_job = get_current_job()
     job = current_job.dependency
     segmentation_path, trace_path = job.result
@@ -185,28 +248,53 @@ def render_segmentation(source_image_path, email, mode="mask 2D"):
         scales=[1],
         sizes=[(100, 100)]
     )
+    return rendered_output
+
+
+def finalize_segmentation(source_image_path, email, mode):
+    logger.info(
+        f"Finalizing segmentation in mode {mode} for {source_image_path}.")
+    current_job = get_current_job()
+    job = current_job.dependency
+    segmentation_path, trace_path = job.result
+    segmentation_output_path = Path(
+        app.config['SEGMENTATIONPATH']) / email / segmentation_path.name
+    segmentation_trace_path = Path(
+        app.config['SEGMENTATIONPATH']) / email / trace_path.name
+    print(
+        f"Copying segmentation trace from {trace_path} to {segmentation_trace_path}.")
+    shutil.copy(trace_path, segmentation_trace_path)
+    print(
+        f"Copying segmentation .npy from {segmentation_path} to {segmentation_output_path}.")
+    shutil.copy(segmentation_path, segmentation_output_path)
+
+
+def finalize_rendering_segmentation(source_image_path, email, mode):
+    logger.info(
+        f"Finalizing rendering segmentation in mode {mode} for {source_image_path}.")
+    current_job = get_current_job()
+    job = current_job.dependency
+    rendered_output = job.result
     rendered_output_path = rendered_output['output_path']
     path_dataset = Path(app.config['IMAGESPATH']) / \
         email / source_image_path.name
     logger.info(
         f"Copying masks from {rendered_output_path} to {path_dataset}.")
+    # Copying the data from the temp directory
     datasets_processing.populate_dataset(
         path_dataset,
         rendered_output_path,
         segmentation=True
     )
-    segmentation_output_path = Path(
-        app.config['SEGMENTATIONPATH']) / email / trace_path.name
-    print(
-        f"Copying segmentation trace from {trace_path} to {segmentation_output_path}.")
-    shutil.copy(trace_path, segmentation_output_path)
-    # Setting masks to true, however without activation
+    # Correcting the metadata
     metadata = datasets_processing.load_metadata(path_dataset)
     if mode == 'mask 2D':
         metadata['masked'] = True
     if mode == 'mask 3D':
         metadata['masked3d'] = True
     datasets_processing.save_metadata(path_dataset, metadata)
+    # Deleting the temp directory containing the render
+    shutil.rmtree(str(rendered_output_path), ignore_errors=True)
 
 
 # TODO Write docstring here
@@ -249,6 +337,7 @@ def trigger_segmentation_after_upload(input_path_czi):
     # run_segmentation.main now works with strings instead of paths!
     return Path(segmentation_path_npy), Path(trace_path)
 
+
 def trigger_segmentation_3d_after_upload(input_path_czi):
     """Computes the segmentation masks for the input .czi file.
 
@@ -287,7 +376,8 @@ def trigger_outline_2d_image_after_upload(input_path_png):
     notebook_path = Path('./segmentation/') / notebook_file_name
     assert notebook_path.is_file() and notebook_path.exists, notebook_path
     # '/home/ubuntu/Projects/data/uploads/grzegorz.kossakowski@gmail.com/FISH1_BDNF488_1_cLTP_3_CA.czi'
-    outline_file_path = run_segmentation_2d.main(notebook_path, str(input_path_png))
+    outline_file_path = run_segmentation_2d.main(
+        notebook_path, str(input_path_png))
     # run_segmentation.main now works with strings instead of paths!
     return Path(outline_file_path)
 
@@ -297,9 +387,11 @@ def outline_2d_adjust_metadata(path_scratchpad, path_file_image):
     current_job = get_current_job()
     job = current_job.dependency
     path_outline = job.result
-    logger.debug(f"path_file_image={path_file_image} path_outline={path_outline}.")
+    logger.debug(
+        f"path_file_image={path_file_image} path_outline={path_outline}.")
     metadata = datasets_processing.load_metadata(path_scratchpad)
-    datasets_processing.add_outline(path_file_image.name, path_outline.name, metadata)
+    datasets_processing.add_outline(
+        path_file_image.name, path_outline.name, metadata)
     datasets_processing.save_metadata(path_scratchpad, metadata)
 
 
