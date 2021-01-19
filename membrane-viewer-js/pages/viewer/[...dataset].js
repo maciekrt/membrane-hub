@@ -11,6 +11,7 @@ import 'react-image-gallery/styles/css/image-gallery.css'
 import ImageGallery from 'react-image-gallery';
 import styled from 'styled-components'
 import { processImages } from '../../logic/serverImages'
+import { translate } from '../../logic/auxiliary'
 
 import Head from 'next/head'
 
@@ -79,7 +80,7 @@ export default function Dataset({ name, file, error, metadata, images }) {
         const channel_idx = router.query.ch_idx ? parseInt(router.query.ch_idx) : 0
         const mask_val = router.query.mask_val ? router.query.mask_val : "unmasked"
         const url = `${baseUrl}img_idx=${idx}&ch_idx=${channel_idx}&mask_val=${mask_val}`
-        console.log(`Routing ${url}.`)
+        //console.log(`Routing ${url}.`)
         router.push(url, url, { shallow: true })
     }
 
@@ -130,8 +131,9 @@ export default function Dataset({ name, file, error, metadata, images }) {
                 {session &&
                     <>
                         {error == 'OK' && <>
-                            <p>{name} / {file} / {chIdx + 1} </p>
-                            {name != session.user.email && <p>Shared with {session.user.email}</p>}
+                            {/* Translating the email into a name */}
+                            <p>{translate(name)} / {file} / {chIdx + 1} </p>
+                            {name != session.user.email && <p>Shared with {translate(session.user.email)}</p>}
                             <p>
                                 {metadata.active === true && <>Active | </>}
                                 <ToggleChannel /> | <ToggleMasked />
