@@ -4,16 +4,15 @@ import styles from './listDatasets.module.css'
 
 import { useSession } from 'next-auth/client'
 
-export default function ListDatasets({ datasets }) {
-   const [session, loading] = useSession()
+export default function ListDatasets({ email, datasets }) {
 
    function ThumbnailsList({ elem }) {
       return (<>
          { elem.metadata.active == true &&
             [...Array(parseInt(elem.metadata.channels))].map((_, level) => <>
-               <Link href={`viewer/${session.user.email}/${elem.imagename}?img_idx=${Math.floor(elem.metadata.z / 2)}&ch_idx=${level}`}><a>
+               <Link href={`viewer/${email}/${elem.imagename}?img_idx=${Math.floor(elem.metadata.z / 2)}&ch_idx=${level}`}><a>
                   <div className={styles.column}>
-                     <img src={`/api/images/${session.user.email}/${elem.imagename}/${level}/${Math.floor(elem.metadata.z / 2)}_100x100.png`} />
+                     <img src={`/api/images/${email}/${elem.imagename}/${level}/${Math.floor(elem.metadata.z / 2)}_100x100.png`} />
                      <figcaption className={styles.caption}>{level + 1}</figcaption>
                   </div></a>
                </Link></>
@@ -38,7 +37,7 @@ export default function ListDatasets({ datasets }) {
                <tr>
                   <td>
                      { elem.metadata.active == true &&
-                        <Link href={`/viewer/${session.user.email}/${elem.imagename}`}>
+                        <Link href={`/viewer/${email}/${elem.imagename}`}>
                            <a>{elem.imagename}</a>
                         </Link>
                      }

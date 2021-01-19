@@ -14,3 +14,14 @@ export function securityCheck(reqData, sessionData) {
     //     console.log("Image: same domains - OK.")
     // }
 }
+
+export function getSameDomainEmails(email) {
+    const domainMe = email.split("@")[1]
+    const baseDir = process.env.IMAGES_FOLDER
+    const fs = require('fs');
+    var dirs = fs.readdirSync(baseDir);
+    return dirs.filter((elem) => {
+        const domainDir = elem.split("@")[1]
+        return domainDir == domainMe && elem != email
+    })
+}

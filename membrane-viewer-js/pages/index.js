@@ -9,6 +9,7 @@ import useSWR from 'swr'
 import Layout, { siteTitle } from '../components/layout'
 import ListDatasets from '../components/listDatasets'
 import utilStyles from '../styles/utils.module.css'
+import { translate } from '../logic/auxiliary'
 
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -22,11 +23,10 @@ import {
 
 function Messaging() {
   const router = useRouter()
-  const image_loading = router.query.image_loading ? parseInt(router.query.image_loading) : 0
   const [session, loading] = useSession()
-
   // Show a toast notification if the image_loading flag is set to 1
   useEffect(() => {
+    const image_loading = router.query.image_loading ? parseInt(router.query.image_loading) : 0
     if (image_loading == 1 && session && !loading) {
       toast.info("I am loading a dataset.. Please refresh in a few minutes.", {
         position: "top-center",
@@ -50,12 +50,25 @@ function Messaging() {
 }
 
 
-function useDatasetsSWR(session) {
-  const fetcher = (url) => fetch(url)
-    .then(res => res.json())
-    .then(data => { console.log(`fetcher[data]: ${JSON.stringify(data)}`); return data })
-  const { data, error } = session ? useSWR(`/api/datasets/${session.user.email}`, fetcher, { refreshInterval: 2000 }) : { data: undefined, error: undefined }
-  return { data, error }
+const fetcherMine = (url) =>
+  fetch(url).then(res => res.json())
+
+function useMyDatasets(session) {
+  const { data, error } = useSWR(`/api/datasets/mine`, 
+    (url) => fetcherMine(url), 
+    { refreshInterval: 2000, data: undefined, error: undefined }) 
+  return { dataMine: data, errorMine: error }
+}
+
+
+const fetcherTheirs = (url) =>
+  fetch(url).then(res => res.json())
+
+function useTheirDatasets(session) {
+  const { data, error } = useSWR(`/api/datasets/theirs`,
+    (url) => fetcherTheirs(url), 
+    { refreshInterval: 2000, data: undefined, error: undefined })
+  return { dataTheirs: data, errorTheirs: error }
 }
 
 
@@ -64,8 +77,10 @@ export default function Home() {
   // Correct this!
   const [session, loading] = useSession()
   // Getting datasets via SWR
-  const { data, error } = useDatasetsSWR(session)
-  const datasets = data?.datasets
+  const { dataMine, errorMine } = useMyDatasets(session)
+  const { dataTheirs, errorTheirs } = useTheirDatasets(session)
+  const datasets = dataMine?.datasets
+  const datasetsTheirs = dataTheirs?.datasets
 
   return (
     <Layout>
@@ -107,19 +122,37 @@ export default function Home() {
         }
       </div>
       <div>
-        <RenderUserDatasets loggedIn={!!session?.user} datasets={datasets} />
-        {error && <><p class="error">{error}</p></>}
+        <RenderUserDatasets user={session?.user} datasets={datasets} />
+        {errorMine && <><p class="error">{errorMine}</p></>}
+      </div>
+      <div>
+        <RenderOthersDatasets loggedIn={!!session?.user} datasetsTheirs={datasetsTheirs} />
+        {errorTheirs && <><p class="error">{errorTheirs}</p></>}
       </div>
     </Layout>
   )
 }
 
-function RenderUserDatasets({ loggedIn, datasets }) {
-  if (!loggedIn)
-    return <p>No images visible here..</p>
+function RenderUserDatasets({ user, datasets }) {
+  if (!user)
+    return <p>My images are not yet visible here..</p>
   else
     if (datasets)
-      return <ListDatasets datasets={datasets} />
+      return <ListDatasets email={user?.email} datasets={datasets} />
     else
-      return <p>Loading datasets...</p>
+      return <p>Loading my datasets...</p>
+}
+
+function RenderOthersDatasets({ loggedIn, datasetsTheirs }) {
+  if (!loggedIn)
+    return <p>Their images are not yet visible here..</p>
+  else
+    if (datasetsTheirs) {
+      return datasetsTheirs.map((dataOther,_) => <>
+          <p>{translate(dataOther.email)}'s uploads</p>
+          <ListDatasets email={dataOther.email} datasets={dataOther.datasets} />
+        </>)
+    }
+    else
+      return <p>Loading their datasets...</p>
 }
