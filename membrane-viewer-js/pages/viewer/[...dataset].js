@@ -162,7 +162,7 @@ export default function Dataset({ name, file, error, metadata, images }) {
                         {error != 'OK' && <><p>{error}</p> </>}
                     </>
                 }
-                {!session && <><p>Login mate pleaaase :) Error MSG {error}.</p></>}
+                {!session && <><p>Please log in. Error msg: {error}.</p></>}
             </div>
         </Layout>)
 }
