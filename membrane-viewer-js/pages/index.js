@@ -81,6 +81,7 @@ export default function Home() {
   const { dataTheirs, errorTheirs } = useTheirDatasets(session)
   const datasets = dataMine?.datasets
   const datasetsTheirs = dataTheirs?.datasets
+  const isGkk = session?.user?.email
 
   return (
     <Layout>
@@ -125,10 +126,13 @@ export default function Home() {
         <RenderUserDatasets user={session?.user} datasets={datasets} />
         {errorMine && <><p class="error">{errorMine}</p></>}
       </div>
+      {/* TODO: for demo purposes, remove this once the demo is done */}
+      {!isGkk &&
       <div>
         <RenderOthersDatasets loggedIn={!!session?.user} datasetsTheirs={datasetsTheirs} />
         {errorTheirs && <><p class="error">{errorTheirs}</p></>}
       </div>
+      }
     </Layout>
   )
 }
