@@ -33,7 +33,7 @@ export default async function handler(req, res) {
             }
             const imgIdx = Math.floor(metadata.z / 2);
             console.log(`imgIdx: ${imgIdx}`)
-            var ogPath = `${FOLDER}${userEmail}/${dataset}/${channelIdx}/${imdIdx}${add}_x1.png`
+            var ogPath = `${FOLDER}${userEmail}/${dataset}/${channelIdx}/${imgIdx}${add}_x1.png`
             var buffer = fs.readFileSync(ogPath);
             res.setHeader('Cache-Control', 'public, must-revalidate, max-age=3155760');
             res.setHeader('Content-Type', 'image/png')
