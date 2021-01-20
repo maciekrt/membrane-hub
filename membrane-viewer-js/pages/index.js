@@ -81,7 +81,7 @@ export default function Home() {
   const { dataTheirs, errorTheirs } = useTheirDatasets(session)
   const datasets = dataMine?.datasets
   const datasetsTheirs = dataTheirs?.datasets
-  const isGkk = session?.user?.email
+  const isGkk = session?.user?.email == 'grzegorz.kossakowski@gmail.com'
 
   return (
     <Layout>
