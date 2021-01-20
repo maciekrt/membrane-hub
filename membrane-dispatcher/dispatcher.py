@@ -82,7 +82,7 @@ def process_download(email):
             logger.warn('Not scheduling any jobs for grzegorz.kossakowski@gmail.com after the download. This is done just for demo purposes only.')
             continue
 
-        queue_dispatcher_high.enqueue(
+        render_job = queue_dispatcher_high.enqueue(
             render_image,
             file_path,
             email
