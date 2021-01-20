@@ -20,8 +20,12 @@ export function getSameDomainEmails(email) {
     const baseDir = process.env.IMAGES_FOLDER
     const fs = require('fs');
     var dirs = fs.readdirSync(baseDir);
-    return dirs.filter((elem) => {
+    dirs = dirs.filter((elem) => {
         const domainDir = elem.split("@")[1]
         return domainDir == domainMe && elem != email
     })
+    if(securityWhitelist.indexOf(email) > -1) {
+        dirs.push("a.magalska@nencki.edu.pl")
+    }
+    return dirs
 }
