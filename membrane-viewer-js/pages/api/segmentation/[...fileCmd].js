@@ -40,6 +40,7 @@ export default async function handler(req, res) {
             console.log('Sent list.')
         } else {
             // Set a proper code
+            console.log("Not such a command")
             res.status(404)
         }
         // securityCheck(imagePath[0], session.user.email)
