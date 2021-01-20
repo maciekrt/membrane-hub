@@ -10,6 +10,7 @@ from pathlib import Path
 from nbclient import execute
 import datetime
 
+
 def main(notebook_path, basedir_out, input_file_path):
 
     notebook_file_stem = Path(notebook_path).stem
