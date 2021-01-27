@@ -108,7 +108,7 @@ export default function Dataset({ name, file, error, metadata, images }) {
             }
             if (!!metadata.mask_3D_conv_clipped === true) {
                 vals.push("mask3D_CC")
-                labels.push("3D masks (CC)")
+                labels.push("3D masks (manually denoised)")
             }
             return <ToggleVariables router={router} urlBase={`/viewer/${name}/${file}/`}
                 variable={{
