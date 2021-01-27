@@ -106,6 +106,10 @@ export default function Dataset({ name, file, error, metadata, images }) {
                 vals.push("mask3D")
                 labels.push("3D masks")
             }
+            if (!!metadata.mask_3D_conv_clipped === true) {
+                vals.push("mask3D_CC")
+                labels.push("3D masks (CC)")
+            }
             return <ToggleVariables router={router} urlBase={`/viewer/${name}/${file}/`}
                 variable={{
                     name: "mask_val", values: vals,
@@ -157,6 +161,14 @@ export default function Dataset({ name, file, error, metadata, images }) {
                                     <ImageGallery items={images[chIdx].mask3D} slideDuration={50}
                                         showPlayButton={false} showIndex={true}
                                         startIndex={imgIdx} lazyLoad={true} 
+                                        onSlide={(idx) => ourOnSlide(idx)} />
+                                </GalleryWrapper>
+                            }
+                            {masked == 'mask3D_CC' &&
+                                <GalleryWrapper>
+                                    <ImageGallery items={images[chIdx].mask3D_CC} slideDuration={50}
+                                        showPlayButton={false} showIndex={true}
+                                        startIndex={imgIdx} lazyLoad={true}
                                         onSlide={(idx) => ourOnSlide(idx)} />
                                 </GalleryWrapper>
                             }

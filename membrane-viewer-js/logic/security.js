@@ -18,7 +18,7 @@ export function securityCheck(reqData, sessionData) {
 export function getSameDomainEmails(email) {
     const domainMe = email.split("@")[1]
      // Blacklisting gmail, it's not an organization
-    if (domainMe == "gmail.com") {
+    if (domainMe == "gmail.com" && securityWhitelist.indexOf(email) == -1) {
         return []
     }
     const baseDir = process.env.IMAGES_FOLDER

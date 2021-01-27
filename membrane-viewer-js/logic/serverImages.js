@@ -30,6 +30,12 @@ export function processImages(email, name) {
             thumbnail: `/api/images/${pathDataset}/${idxChannels}/${filename}_masked3d_100x100.png`
          }))
       }
+      if (!!metadata.mask_3D_conv_clipped == true) {
+         res.mask3D_CC = metadata.images.map((filename, _) => ({
+            original: `/api/images/${pathDataset}/${idxChannels}/${filename}_masked3d_conv_clipped_x1.png`,
+            thumbnail: `/api/images/${pathDataset}/${idxChannels}/${filename}_masked3d_conv_clipped_100x100.png`
+         }))
+      }
       // console.log(`process_images[res]: ${JSON.stringify(res)}`)
       return res
    })
