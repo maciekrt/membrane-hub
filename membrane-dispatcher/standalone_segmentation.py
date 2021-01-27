@@ -6,7 +6,7 @@ from pathlib import Path
 from rq import Queue, Retry, get_current_job
 from redis import Redis
 from tqdm import tqdm
-from standalone_processing import compute_segmentation, render_segmentation
+from standalone_processing import compute_segmentation, render_segmentation, copy_segmentations
 
 
 # logger = logging.getLogger('standalone_segmentation')
@@ -30,7 +30,6 @@ queue_dispatcher_low = Queue(config.QUEUE_NAME_LOW, connection=redis_conn,
 def main():
     name = "a.magalska@nencki.edu.pl"
     base_path = Path(config.IMAGESPATH) / name
-    tmp_path = Path("./tmp")
     print(f"I'm running: {base_path}.")
     for dataset in tqdm(base_path.iterdir()):
         if dataset.is_dir() and dataset.stem != 'scratchpad':
@@ -38,14 +37,22 @@ def main():
             if 'source' in metadata.keys():
                 print(f"Source is present. Processing {dataset}.")
                 file_path = Path(metadata['source'])
-                compute_job = queue_dispatcher_default.enqueue(
+                compute_job = queue_dispatcher_low.enqueue(
                     compute_segmentation,
-                    file_path
+                    file_path,
+                    job_timeout='60m',
+                    result_ttl=86400
                 )
-                queue_dispatcher_high.enqueue(
+                render_job = queue_dispatcher_default.enqueue(
                     render_segmentation,
                     file_path,
                     depends_on=compute_job
+                )
+                queue_dispatcher_high.enqueue(
+                    copy_segmentations,
+                    dataset,
+                    depends_on=render_job,
+                    at_front=True
                 )
 
 

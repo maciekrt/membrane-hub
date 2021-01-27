@@ -42,6 +42,13 @@ def render_segmentation(source_image_path):
         scales=[1],
         sizes=[(100, 100)]
     )
+    return rendered_output
+    
+    
+def copy_segmentations(dataset):
+    current_job = get_current_job()
+    job = current_job.dependency
+    rendered_output = job.result
     datasets_processing.populate_dataset(
         dataset, rendered_output['output_path'])
     metadata = datasets_processing.load_metadata(dataset)
