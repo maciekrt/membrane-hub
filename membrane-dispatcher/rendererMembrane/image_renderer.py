@@ -132,7 +132,7 @@ class ImageRenderer(object):
                                           preserve_range=True)
             io.write_png(str(path), imgResized.astype(np.uint8))
 
-    def render(self, rendering_mode='image only', **kwargs):
+    def render(self, rendering_mode='image only', filename_modifier="", **kwargs):
         """Rendering the file.  The output is saved to a temporary 
         directory which is returned along with some metadata.
 
@@ -169,17 +169,18 @@ class ImageRenderer(object):
                 if rendering_mode == 'image only':
                     img = self.headless_renderer.render()
                     # This renders all the sizes and scales provided in **kwargs
-                    self.save(img, result_name, folders=str(c), **kwargs)
+                    self.save(img, result_name+f"{filename_modifier}", folders=str(c), **kwargs)
                 # rendering_mode
                 if rendering_mode == 'mask 2D':
-                    result_masked_name = (result_name + "_masked")
+                    result_masked_name = (
+                        result_name + f"_masked{filename_modifier}")
                     self.viewer.layers[1].visible = True
                     img = self.headless_renderer.render()
                     # This renders all the sizes and scales provided in **kwargs
                     self.save(img, result_masked_name,
                               folders=str(c), **kwargs)
                 if rendering_mode == 'mask 3D':
-                    result_masked3d_name = (result_name + "_masked3d")
+                    result_masked3d_name = (result_name + f"_masked3d{filename_modifier}")
                     self.viewer.layers[1].visible = True
                     img = self.headless_renderer.render()
                     # This renders all the sizes and scales provided in **kwargs

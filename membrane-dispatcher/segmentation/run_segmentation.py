@@ -28,6 +28,8 @@ def main(notebook_path, basedir_out, input_file_path):
         out_mask_filepath = f'{basedir_out}/masks_2D_stitched_{input_file_name}.npy'
     elif notebook_file_stem == 'run_cellpose_GPU_membrane_3d':
         out_mask_filepath = f'{basedir_out}/masks_3D_{input_file_name}.npy'
+    elif notebook_file_stem == 'run_cellpose_GPU_membrane_conv':
+        out_mask_filepath = f'{basedir_out}/masks_3D_conv_clipped_{input_file_name}.npy'
     else:
         raise f'Unknown notebook type: {notebook_file_stem}'
 
