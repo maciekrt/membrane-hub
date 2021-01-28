@@ -17,8 +17,9 @@ redis_conn = Redis(host="hubbox",port=6379)
 queue = Queue("gpuboxWorkers", connection=redis_conn,
                          default_timeout=3600)  # no args implies the default queue
 
-print("Let's work!!")
-for i in range(3):
-    print(f"Let's work a bit more {i} :)")
-    queue.enqueue(worker.play, i)
+file_name = "FISH3_BDNF488_7_cLTP_romi_4_CA.czi"
+
+if __name__="__main__":
+    print("Let's download remotely!!")
+    queue.enqueue(worker.download, file_name)
     
