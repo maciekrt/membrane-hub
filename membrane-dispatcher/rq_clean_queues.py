@@ -2,7 +2,7 @@ from rq import Queue
 from redis import Redis
 import config
 
-queues = [config.QUEUE_NAME_HIGH, config.QUEUE_NAME_DEFAULT, config.QUEUE_NAME_LOW]
+queues = [config.QUEUE_NAME_HIGH, config.QUEUE_NAME_DEFAULT, config.QUEUE_NAME_LOW, "gpuboxWorkers"]
 
 redis_conn = Redis()
 for name in queues:
