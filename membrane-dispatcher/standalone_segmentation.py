@@ -1,4 +1,3 @@
-import dispatcher
 # import logging
 import config
 from processing import datasets_processing
@@ -6,8 +5,7 @@ from pathlib import Path
 from rq import Queue, Retry, get_current_job
 from redis import Redis
 from tqdm import tqdm
-from standalone_processing import compute_segmentation, render_segmentation, copy_segmentations,
-download_remotely, finalize_segmentation_remotely
+from standalone_processing import compute_segmentation, download_remotely, finalize_segmentation_remotely
 
 
 # logger = logging.getLogger('standalone_segmentation')
