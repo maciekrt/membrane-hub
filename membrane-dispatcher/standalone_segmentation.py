@@ -33,7 +33,7 @@ bucket_name = "membranehubbucket"
 
 
 def main():
-    name = "m.zdanowicz@gmail.com"
+    name = "grzegorz.kossakowski@gmail.com"
     base_path = Path(config.IMAGESPATH) / name
     print(f"I'm running: {base_path}.")
     for dataset in tqdm(base_path.iterdir()):
@@ -45,6 +45,7 @@ def main():
                 # Upload flattens the whole directory structure just keeping names.
                 upload_job = queue_dispatcher_high.enqueue(
                     standalone_processing.upload_file_to_s3,
+                    bucket_name,
                     image_path
                 )
                 # Downloading remotely
@@ -66,22 +67,28 @@ def main():
                     depends_on=download_job
                 )
                 # Copying the result to the right folder remotely
-                queue.enqueue(
+                s3_upload = queue.enqueue(
                     standalone_processing.finalize_segmentation_remotely,
-                    results_path_remote,
+                    bucket_name,
                     depends_on=compute_job
                 )
-        # render_job = queue_dispatcher_default.enqueue(
-        #     standalone_processing.render_segmentation,
-        #     file_path,
-        #     depends_on=compute_job
-        # )
-        # queue_dispatcher_high.enqueue(
-        #     standalone_processing.copy_segmentations,
-        #     dataset,
-        #     depends_on=render_job,
-        #     at_front=True
-        # )
+                finalize_job = queue_dispatcher_high.enqueue(
+                    standalone_processing.finalize_locally,
+                    bucket_name,
+                    Path(config.SEGMENTATIONPATH) / name,
+                    depends_on=s3_upload
+                )
+                render_job = queue_dispatcher_default.enqueue(
+                    standalone_processing.render_segmentation,
+                    image_path,
+                    depends_on=finalize_job
+                )
+                queue_dispatcher_high.enqueue(
+                    standalone_processing.copy_renderings,
+                    dataset,
+                    depends_on=render_job,
+                    at_front=True
+                )
 
 # def main():
 #     name = "a.magalska@nencki.edu.pl"
