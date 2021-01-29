@@ -1,4 +1,3 @@
-import dispatcher
 # import logging
 import config
 from processing import datasets_processing
@@ -6,8 +5,7 @@ from pathlib import Path
 from rq import Queue, Retry, get_current_job
 from redis import Redis
 from tqdm import tqdm
-from standalone_processing import compute_segmentation, render_segmentation, copy_segmentations,
-download_remotely, finalize_segmentation_remotely
+from standalone_processing import compute_segmentation, download_remotely, finalize_segmentation_remotely
 
 
 # logger = logging.getLogger('standalone_segmentation')
@@ -38,7 +36,8 @@ bucket_name = "membranehubbucket"
 def main():
     files = ["FISH3_BDNF488_7_cLTP_romi_4_CA.czi"]
     for file in files:
-        download_job = queue.download_remotely(
+        download_job = queue.enqueue(
+            download_remotely,
             bucket_name,
             downloads_path_remote,
             file
