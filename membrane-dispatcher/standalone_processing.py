@@ -11,12 +11,19 @@ from redis import Redis
 import shutil
 import boto3
 
-
-def download_remotely(bucket_name, downloads_path, file_name):
-    print(f"Downloading.. small_czi/{file_name}")
+def upload_file_to_s3(bucket_name, file_path):
+    # It's a bit ad hoc.. In particular we don't care about files being replaced on S3
+    print(f"Uploading.. {file_path}")
     s3_resource = boto3.resource('s3')
-    s3_resource.Object(bucket_name, "small_czi/" + file_name).download_file(str(downloads_path / file_name))
-    print(f"Done.. {file_name}")
+    s3_resource.meta.client.upload_file(str(file_path), bucket_name, file_path.name)
+    print(f"Done.. {file_path}")
+
+
+def download_file_from_s3(bucket_name, s3_path, result_path):
+    print(f"Downloading.. {s3_path}")
+    s3_resource = boto3.resource('s3')
+    s3_resource.Object(bucket_name, str(s3_path)).download_file(str(result_path))
+    print(f"Done.. {s3_path}")
 
 
 def compute_segmentation(notebook_file_name, input_path_czi):
