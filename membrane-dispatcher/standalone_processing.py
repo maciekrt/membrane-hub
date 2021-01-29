@@ -67,7 +67,7 @@ def finalize_locally(bucket_name, local_path):
     return local_path / segmentation_path.name
 
 
-def render_segmentation(source_image_path):
+def render_segmentation(source_image_path,mode):
     current_job = get_current_job()
     job = current_job.dependency
     segmentation_path = job.result
@@ -75,7 +75,7 @@ def render_segmentation(source_image_path):
     renderer = ImageRenderer(source_image_path, segmentation_path)
     renderer.prepare_canvas()
     rendered_output = renderer.render(
-        rendering_mode='mask 3D',
+        rendering_mode='outlines',
         filename_modifier="_conv_clipped",
         scales=[1],
         sizes=[(100, 100)]

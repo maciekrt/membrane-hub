@@ -24,6 +24,7 @@ queue_dispatcher_default = Queue(config.QUEUE_NAME_DEFAULT, connection=redis_con
 queue_dispatcher_low = Queue(config.QUEUE_NAME_LOW, connection=redis_conn,
                              default_timeout=3600)  # no args implies the default queue
 queue = Queue("gpuboxWorkers", connection=redis_conn, default_timeout=3600)  
+queueHigh = Queue("gpuboxWorkersHigh", connection=redis_conn, default_timeout=3600)
 
 results_path_remote = Path("/home/membrane/coding/membrane-hub/tmp/results")
 downloads_path_remote = Path(
@@ -33,7 +34,7 @@ bucket_name = "membranehubbucket"
 
 
 def main():
-    name = "grzegorz.kossakowski@gmail.com"
+    name = "m.zdanowicz@gmail.com"
     base_path = Path(config.IMAGESPATH) / name
     print(f"I'm running: {base_path}.")
     for dataset in tqdm(base_path.iterdir()):
@@ -50,7 +51,7 @@ def main():
                 )
                 # Downloading remotely
                 remote_path = downloads_path_remote / image_path.name
-                download_job = queue.enqueue(
+                download_job = queueHigh.enqueue(
                     standalone_processing.download_file_from_s3,
                     bucket_name,
                     image_path.name,
@@ -67,7 +68,7 @@ def main():
                     depends_on=download_job
                 )
                 # Copying the result to the right folder remotely
-                s3_upload = queue.enqueue(
+                s3_upload = queueHigh.enqueue(
                     standalone_processing.finalize_segmentation_remotely,
                     bucket_name,
                     depends_on=compute_job
@@ -81,6 +82,7 @@ def main():
                 render_job = queue_dispatcher_default.enqueue(
                     standalone_processing.render_segmentation,
                     image_path,
+                    mode='outlines',
                     depends_on=finalize_job
                 )
                 queue_dispatcher_high.enqueue(
