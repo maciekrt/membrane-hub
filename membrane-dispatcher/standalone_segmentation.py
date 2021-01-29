@@ -44,6 +44,7 @@ def main():
         )
         compute_job = queue.enqueue(
             compute_segmentation,
+            segm_notebook_filename,
             downloads_path_remote / file,
             job_timeout='60m',
             result_ttl=86400,
