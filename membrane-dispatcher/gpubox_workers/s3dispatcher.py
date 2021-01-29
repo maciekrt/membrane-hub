@@ -19,7 +19,7 @@ queue = Queue("gpuboxWorkers", connection=redis_conn,
 
 file_name = "FISH3_BDNF488_7_cLTP_romi_4_CA.czi"
 
-if __name__="__main__":
+if __name__=="__main__":
     print("Let's download remotely!!")
     queue.enqueue(worker.download, file_name)
     
