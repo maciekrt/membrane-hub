@@ -72,7 +72,9 @@ export default function ListDatasets({ email, datasets }) {
                   <td>
                      { elem.metadata.masked && <p>2D stitched</p> }
                      { elem.metadata.masked3d && <p>3D at once</p> }
-                     { !!elem.metadata.mask_3D_conv_clipped && <p>3D manually denoised</p>}
+                     { !!elem.metadata.mask_3D_conv_clipped && <p>3D (manually denoised)</p>}
+                     { !!elem.metadata.outlines && <p>outlines</p>}
+                     { !!elem.metadata.outlines_conv_clipped && <p>outlines (manually denoised)</p>}
                   </td>
                   <td>
                      { elem.metadata.active === true &&

@@ -110,6 +110,14 @@ export default function Dataset({ name, file, error, metadata, images }) {
                 vals.push("mask3D_CC")
                 labels.push("3D masks (manually denoised)")
             }
+            if (!!metadata.outlines === true) {
+                vals.push("outlines3D")
+                labels.push("outlines")
+            }
+            if (!!metadata.outlines_conv_clipped === true) {
+                vals.push("outlines3D_CC")
+                labels.push("outlines (manually denoised)")
+            }
             return <ToggleVariables router={router} urlBase={`/viewer/${name}/${file}/`}
                 variable={{
                     name: "mask_val", values: vals,
@@ -167,6 +175,22 @@ export default function Dataset({ name, file, error, metadata, images }) {
                             {masked == 'mask3D_CC' &&
                                 <GalleryWrapper>
                                     <ImageGallery items={images[chIdx].mask3D_CC} slideDuration={50}
+                                        showPlayButton={false} showIndex={true}
+                                        startIndex={imgIdx} lazyLoad={true}
+                                        onSlide={(idx) => ourOnSlide(idx)} />
+                                </GalleryWrapper>
+                            }
+                            {masked == 'outlines3D' &&
+                                <GalleryWrapper>
+                                    <ImageGallery items={images[chIdx].outlines3D} slideDuration={50}
+                                        showPlayButton={false} showIndex={true}
+                                        startIndex={imgIdx} lazyLoad={true}
+                                        onSlide={(idx) => ourOnSlide(idx)} />
+                                </GalleryWrapper>
+                            }
+                            {masked == 'outlines3D_CC' &&
+                                <GalleryWrapper>
+                                    <ImageGallery items={images[chIdx].outlines3D_CC} slideDuration={50}
                                         showPlayButton={false} showIndex={true}
                                         startIndex={imgIdx} lazyLoad={true}
                                         onSlide={(idx) => ourOnSlide(idx)} />

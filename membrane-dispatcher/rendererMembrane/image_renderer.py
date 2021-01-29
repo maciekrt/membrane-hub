@@ -18,6 +18,8 @@ import vispy.io as io
 from vispy import app
 app.use_app('osmesa')
 
+from cellpose import utils
+
 
 class ImageRenderer(object):
 
@@ -132,6 +134,79 @@ class ImageRenderer(object):
                                           preserve_range=True)
             io.write_png(str(path), imgResized.astype(np.uint8))
 
+    # def render(self, rendering_mode='image only', filename_modifier="", **kwargs):
+    #     """Rendering the file.  The output is saved to a temporary 
+    #     directory which is returned along with some metadata.
+
+    #     Keyword arguments:
+    #     rendering_mode --  'image only' / 'mask 2D' / 'mask 3D'
+    #     **kwargs -- scales and sizes for the renderer. For example
+    #         scales = [1,2], sizes = [(100,100)] makes the function
+    #         render the images in the original size, magnified 2 times 
+    #         and with 100x100 thumbnals.
+
+    #     Returns:
+    #     {
+    #         z: int, 
+    #         channels: int, 
+    #         output_path: Path, 
+    #         masked: bool
+    #         masked3d: bool
+    #     }
+    #     """
+
+    #     # The path for the results of the processing
+    #     print(
+    #         f"ImageRenderer.render: Processing {self.result_path} in mode {rendering_mode}..")
+    #     assert (self.mask_path is not None) or (rendering_mode == 'image only')
+        
+    #     modifier = ""
+    #     if rendering_mode == 'mask 2D':
+    #         modifier = f"_masked{filename_modifier}"
+    #     if rendering_mode == 'mask 3D':
+    #         modifier = f"_masked{filename_modifier}"
+    #     if rendering_mode == 'outlines':
+    #         modifier = f"_outlines{filename_modifier}"
+
+    #     # Iterated channels and z
+    #     for c in tqdm(list(range(self.channels))):
+    #         for z in tqdm(list(range(self.z))):
+    #             # There are some iterable dims
+    #             self.viewer.dims.set_point(0, c)
+    #             self.viewer.dims.set_point(1, z)
+    #             # Unmasked
+    #             result_name = str(z)
+    #             if rendering_mode == 'image only':
+    #                 img = self.headless_renderer.render()
+    #                 # This renders all the sizes and scales provided in **kwargs
+    #                 self.save(img, result_name+f"{filename_modifier}", folders=str(c), **kwargs)
+    #             # rendering_mode
+    #             if rendering_mode == 'mask 2D':
+    #                 result_masked_name = (
+    #                     result_name + f"_masked{filename_modifier}")
+    #                 self.viewer.layers[1].visible = True
+    #                 img = self.headless_renderer.render()
+    #                 # This renders all the sizes and scales provided in **kwargs
+    #                 self.save(img, result_masked_name,
+    #                           folders=str(c), **kwargs)
+    #             if rendering_mode == 'mask 3D':
+    #                 result_masked3d_name = (result_name + f"_masked3d{filename_modifier}")
+    #                 self.viewer.layers[1].visible = True
+    #                 img = self.headless_renderer.render()
+    #                 # This renders all the sizes and scales provided in **kwargs
+    #                 self.save(img, result_masked3d_name,
+    #                           folders=str(c), **kwargs)
+    #     print("ImageRenderer.render: Done.")
+    #     # Returning some metadata
+    #     result_metadata = {
+    #         'masked': (self.mask_path is not None) and rendering_mode == 'mask 2D',
+    #         'masked3d': (self.mask_path is not None) and rendering_mode == 'mask 3D',
+    #         'z': self.z,
+    #         'channels': self.channels,
+    #         'output_path': self.result_path
+    #     }
+    #     return result_metadata
+    
     def render(self, rendering_mode='image only', filename_modifier="", **kwargs):
         """Rendering the file.  The output is saved to a temporary 
         directory which is returned along with some metadata.
@@ -157,6 +232,27 @@ class ImageRenderer(object):
         print(
             f"ImageRenderer.render: Processing {self.result_path} in mode {rendering_mode}..")
         assert (self.mask_path is not None) or (rendering_mode == 'image only')
+        
+        modifier = ""
+        if rendering_mode == 'mask 2D':
+            self.viewer.layers[1].visible = True
+            modifier = f"_masked{filename_modifier}"
+        if rendering_mode == 'mask 3D':
+            self.viewer.layers[1].visible = True
+            modifier = f"_masked3d{filename_modifier}"
+        if rendering_mode == 'outlines':
+            self.viewer.layers[1].opacity = 1
+            self.viewer.layers[1].visible = True
+            modifier = f"_outlines{filename_modifier}"
+            masks = self.viewer.layers[1].data[0]
+            outlines = utils.masks_to_outlines(masks)
+            outZ, outY, outX = np.nonzero(outlines)
+            self.viewer.layers[1].data[...] = 0
+            for i in range(-1,1,1):
+                for j in range(-1,1,1):
+                    idY = np.maximum(0,np.minimum(outY+i,masks.shape[-2]))
+                    idX = np.maximum(0,np.minimum(outX+j,masks.shape[-1]))
+                    self.viewer.layers[1].data[...,outZ, idY, idX] = 19
 
         # Iterated channels and z
         for c in tqdm(list(range(self.channels))):
@@ -165,32 +261,16 @@ class ImageRenderer(object):
                 self.viewer.dims.set_point(0, c)
                 self.viewer.dims.set_point(1, z)
                 # Unmasked
-                result_name = str(z)
-                if rendering_mode == 'image only':
-                    img = self.headless_renderer.render()
-                    # This renders all the sizes and scales provided in **kwargs
-                    self.save(img, result_name+f"{filename_modifier}", folders=str(c), **kwargs)
-                # rendering_mode
-                if rendering_mode == 'mask 2D':
-                    result_masked_name = (
-                        result_name + f"_masked{filename_modifier}")
-                    self.viewer.layers[1].visible = True
-                    img = self.headless_renderer.render()
-                    # This renders all the sizes and scales provided in **kwargs
-                    self.save(img, result_masked_name,
-                              folders=str(c), **kwargs)
-                if rendering_mode == 'mask 3D':
-                    result_masked3d_name = (result_name + f"_masked3d{filename_modifier}")
-                    self.viewer.layers[1].visible = True
-                    img = self.headless_renderer.render()
-                    # This renders all the sizes and scales provided in **kwargs
-                    self.save(img, result_masked3d_name,
-                              folders=str(c), **kwargs)
+                result_name = f"{z}{modifier}"
+                img = self.headless_renderer.render()
+                # This renders all the sizes and scales provided in **kwargs
+                self.save(img, result_name, folders=str(c), **kwargs)
         print("ImageRenderer.render: Done.")
         # Returning some metadata
         result_metadata = {
             'masked': (self.mask_path is not None) and rendering_mode == 'mask 2D',
             'masked3d': (self.mask_path is not None) and rendering_mode == 'mask 3D',
+            'outlines': (self.mask_path is not None) and rendering_mode == 'outlines',
             'z': self.z,
             'channels': self.channels,
             'output_path': self.result_path
@@ -218,16 +298,16 @@ class ImageRenderer(object):
 
 def func():
     path_file = Path(
-        "/home/ubuntu/Projects/data/uploads/m.zdanowicz@gmail.com/FISH1_BDNF488_1_cLTP_1_CA.czi")
+        "/home/ubuntu/Projects/data/uploads/grzegorz.kossakowski@gmail.com/FISH1_BDNF488_1_cLTP_3_CA-gkk FISH1_BDNF488_1_cLTP_2_CA-gkk/FISH1_BDNF488_1_cLTP_2_CA-gkk.czi")
     path_mask = Path(
-        "/home/ubuntu/tmp/masks_2D_stitched_FISH1_BDNF488_10_DMSO_romi_4_CA.npy")
+        "/home/ubuntu/Projects/data/segmentation/grzegorz.kossakowski@gmail.com/masks_3D_conv_clipped_FISH1_BDNF488_1_cLTP_2_CA-gkk.npy")
     path_result = Path("/home/ubuntu/Projects/data/images/example/")
 
-    renderer = ImageRenderer(path_file, None)
+    renderer = ImageRenderer(path_file, path_mask)
     metadata = renderer.prepare_canvas()
     print(f"metadata1: {metadata}")
-    rendered_output = renderer.render(
-        rendering_mode='image only', scales=[1], sizes=[])
+    rendered_output = renderer.render_outlines(
+        rendering_mode='outlines', scales=[1], sizes=[])
     print(f"metadata2: {rendered_output}")
 
 # '0.4.1a2.dev24+gc278fb4'

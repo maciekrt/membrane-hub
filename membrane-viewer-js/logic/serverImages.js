@@ -36,6 +36,18 @@ export function processImages(email, name) {
             thumbnail: `/api/images/${pathDataset}/${idxChannels}/${filename}_masked3d_conv_clipped_100x100.png`
          }))
       }
+      if (!!metadata.outlines == true) {
+         res.outlines3D = metadata.images.map((filename, _) => ({
+            original: `/api/images/${pathDataset}/${idxChannels}/${filename}_outlines_x1.png`,
+            thumbnail: `/api/images/${pathDataset}/${idxChannels}/${filename}_outlines_100x100.png`
+         }))
+      }
+      if (!!metadata.outlines_conv_clipped == true) {
+         res.outlines3D_CC = metadata.images.map((filename, _) => ({
+            original: `/api/images/${pathDataset}/${idxChannels}/${filename}_outlines_conv_clipped_x1.png`,
+            thumbnail: `/api/images/${pathDataset}/${idxChannels}/${filename}_outlines_conv_clipped_100x100.png`
+         }))
+      }
       // console.log(`process_images[res]: ${JSON.stringify(res)}`)
       return res
    })
