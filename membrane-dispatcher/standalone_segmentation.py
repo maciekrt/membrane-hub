@@ -29,35 +29,38 @@ queueHigh = Queue("gpuboxWorkersHigh", connection=redis_conn, default_timeout=36
 results_path_remote = Path("/home/membrane/coding/membrane-hub/tmp/results")
 downloads_path_remote = Path(
     "/home/membrane/coding/membrane-hub/tmp/downloads")
-segm_notebook_filename = 'run_cellpose_GPU_membrane_conv.ipynb'
+segm_notebook_filename = 'run_cellpose_GPU_membrane_3d.ipynb'
+# segm_notebook_filename = 'run_cellpose_GPU_membrane_conv.ipynb'
 bucket_name = "membranehubbucket"
 
 
 def main():
     name = "m.zdanowicz@gmail.com"
     base_path = Path(config.IMAGESPATH) / name
+    # Already downloaded
+    downloaded_remotely = True
     print(f"I'm running: {base_path}.")
     for dataset in tqdm(base_path.iterdir()):
         if dataset.is_dir() and dataset.stem != 'scratchpad':
             metadata = datasets_processing.load_metadata(dataset)
             if 'source' in metadata.keys():
                 image_path = Path(metadata['source'])
+                remote_path = downloads_path_remote / image_path.name
                 print(f"Processing {dataset}; source is {image_path}.")
                 # Upload flattens the whole directory structure just keeping names.
-                upload_job = queue_dispatcher_high.enqueue(
-                    standalone_processing.upload_file_to_s3,
-                    bucket_name,
-                    image_path
-                )
-                # Downloading remotely
-                remote_path = downloads_path_remote / image_path.name
-                download_job = queueHigh.enqueue(
-                    standalone_processing.download_file_from_s3,
-                    bucket_name,
-                    image_path.name,
-                    remote_path,
-                    depends_on=upload_job
-                )
+                if not downloaded_remotely:
+                    upload_job = queue_dispatcher_high.enqueue(
+                        standalone_processing.upload_file_to_s3,
+                        bucket_name,
+                        image_path
+                    )
+                    download_job = queueHigh.enqueue(
+                        standalone_processing.download_file_from_s3,
+                        bucket_name,
+                        image_path.name,
+                        remote_path,
+                        depends_on=upload_job
+                    )
                 # Computing segmentations remotely
                 compute_job = queue.enqueue(
                     standalone_processing.compute_segmentation,
@@ -82,12 +85,13 @@ def main():
                 render_job = queue_dispatcher_default.enqueue(
                     standalone_processing.render_segmentation,
                     image_path,
-                    mode='outlines',
+                    rendering_mode='outlines',
                     depends_on=finalize_job
                 )
                 queue_dispatcher_high.enqueue(
                     standalone_processing.copy_renderings,
                     dataset,
+                    mode='outlines',
                     depends_on=render_job,
                     at_front=True
                 )

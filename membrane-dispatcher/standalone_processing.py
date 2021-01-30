@@ -67,28 +67,30 @@ def finalize_locally(bucket_name, local_path):
     return local_path / segmentation_path.name
 
 
-def render_segmentation(source_image_path,mode):
+def render_segmentation(source_image_path, rendering_mode, modifier=None):
     current_job = get_current_job()
     job = current_job.dependency
     segmentation_path = job.result
     print(f"Rendering {source_image_path} with masks {segmentation_path}.")
     renderer = ImageRenderer(source_image_path, segmentation_path)
     renderer.prepare_canvas()
+    if modifier is None:
+        modifier = ""
     rendered_output = renderer.render(
-        rendering_mode='outlines',
-        filename_modifier="_conv_clipped",
+        rendering_mode=rendering_mode,
+        filename_modifier=modifier,
         scales=[1],
         sizes=[(100, 100)]
     )
     return rendered_output
     
     
-def copy_renderings(dataset):
+def copy_renderings(dataset, mode):
     current_job = get_current_job()
     job = current_job.dependency
     rendered_output = job.result
     datasets_processing.populate_dataset(
         dataset, rendered_output['output_path'])
     metadata = datasets_processing.load_metadata(dataset)
-    metadata['mask_3D_conv_clipped'] = True
+    metadata[mode] = True
     datasets_processing.save_metadata(dataset, metadata)
