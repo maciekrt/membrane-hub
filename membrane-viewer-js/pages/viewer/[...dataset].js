@@ -4,14 +4,14 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/router'
 import { useSession, getSession } from 'next-auth/client'
-import { securityCheck } from '../../logic/security'
+import { securityCheck } from '../../lib/security'
 
 import Layout, { siteTitle } from '../../components/layout'
 import 'react-image-gallery/styles/css/image-gallery.css'
 import ImageGallery from 'react-image-gallery';
 import styled from 'styled-components'
-import { processImages } from '../../logic/serverImages'
-import { translate } from '../../logic/auxiliary'
+import { processImages } from '../../lib/serverImages'
+import { translate } from '../../lib/auxiliary'
 
 import Head from 'next/head'
 

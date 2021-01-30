@@ -1,7 +1,7 @@
 // We can make some getSession here api is in pages 
 import { getSession } from 'next-auth/client'
-import { processDatasets } from '../../../logic/serverDatasets'
-import { getSameDomainEmails } from '../../../logic/security'
+import { processDatasets } from '../../../lib/serverDatasets'
+import { getSameDomainEmails } from '../../../lib/security'
 
 export default async function handler(req, res) {
     const session = await getSession({ req })

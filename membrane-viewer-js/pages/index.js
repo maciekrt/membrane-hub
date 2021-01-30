@@ -9,7 +9,7 @@ import useSWR from 'swr'
 import Layout, { siteTitle } from '../components/layout'
 import ListDatasets from '../components/listDatasets'
 import utilStyles from '../styles/utils.module.css'
-import { translate } from '../logic/auxiliary'
+import { translate } from '../lib/auxiliary'
 
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';

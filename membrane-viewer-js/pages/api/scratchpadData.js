@@ -1,6 +1,6 @@
 // We can make some getSession here api is in pages 
 import { getSession } from 'next-auth/client'
-import { processScratchpad } from '../../logic/processScratchpad'
+import { processScratchpad } from '../../lib/processScratchpad'
 
 export default async function handler(req, res) {
     const session = await getSession({ req })
