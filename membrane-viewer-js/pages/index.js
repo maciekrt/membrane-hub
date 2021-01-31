@@ -13,21 +13,21 @@ import { translate } from '../lib/auxiliary'
 
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import { useUserInfo  } from '../lib/user';
 
 import {
   signIn,
   signOut,
-  useSession,
 } from 'next-auth/client'
 
 
 function Messaging() {
   const router = useRouter()
-  const [session, loading] = useSession()
+  const user = useUserInfo()
   // Show a toast notification if the image_loading flag is set to 1
   useEffect(() => {
     const image_loading = router.query.image_loading ? parseInt(router.query.image_loading) : 0
-    if (image_loading == 1 && session && !loading) {
+    if (image_loading == 1 && user && !loading) {
       toast.info("I am loading a dataset.. Please refresh in a few minutes.", {
         position: "top-center",
         autoClose: 3000,
@@ -53,7 +53,7 @@ function Messaging() {
 const fetcherMine = (url) =>
   fetch(url).then(res => res.json())
 
-function useMyDatasets(session) {
+function useMyDatasets() {
   const { data, error } = useSWR(`/api/datasets/mine`, 
     (url) => fetcherMine(url), 
     { refreshInterval: 2000, data: undefined, error: undefined }) 
@@ -64,24 +64,23 @@ function useMyDatasets(session) {
 const fetcherTheirs = (url) =>
   fetch(url).then(res => res.json())
 
-function useTheirDatasets(session) {
+function useTheirDatasets() {
   const { data, error } = useSWR(`/api/datasets/theirs`,
     (url) => fetcherTheirs(url), 
     { refreshInterval: 2000, data: undefined, error: undefined })
   return { dataTheirs: data, errorTheirs: error }
 }
 
-
 export default function Home() {
-  // Rule of Hooks violated here by useDatasetsSWR (session additional useSWR )
-  // Correct this!
-  const [session, loading] = useSession()
+  const user = useUserInfo()
   // Getting datasets via SWR
-  const { dataMine, errorMine } = useMyDatasets(session)
-  const { dataTheirs, errorTheirs } = useTheirDatasets(session)
+  const { dataMine, errorMine } = useMyDatasets()
+  const { dataTheirs, errorTheirs } = useTheirDatasets()
   const datasets = dataMine?.datasets
   const datasetsTheirs = dataTheirs?.datasets
-  const isGkk = session?.user?.email == 'grzegorz.kossakowski@gmail.com'
+  const isGkk = user?.email == 'grzegorz.kossakowski@gmail.com'
+
+  console.log(`errorMine is ${errorMine}`)
 
   return (
     <Layout>
@@ -96,7 +95,7 @@ export default function Home() {
       </Head>
       <div><Messaging /></div>
       <div className={utilStyles.grid}>
-        {session && <>
+        {user && <>
           <Link href="/upload">
             <a className={utilStyles.card}>
               <h3>Upload a file</h3>
@@ -105,7 +104,7 @@ export default function Home() {
           </Link>
         </>
         }
-        {!session &&
+        {!user &&
           <Link href="/" >
             <a className={utilStyles.card} onClick={signIn}>
               <h3>Log in</h3>
@@ -113,24 +112,24 @@ export default function Home() {
             </a>
           </Link>
         }
-        {session &&
+        {user &&
           <Link href="/">
             <a className={utilStyles.card} onClick={signOut}>
               <h3>Log out</h3>
-              <p>You are logged in as {session.user.email}</p>
+              <p>You are logged in as {user.email}</p>
             </a>
           </Link>
         }
       </div>
       <div>
-        <RenderUserDatasets user={session?.user} datasets={datasets} />
-        {errorMine && <><p class="error">{errorMine}</p></>}
+        <RenderUserDatasets user={user} datasets={datasets} />
+        {errorMine && <><p class="error">foo {errorMine}</p></>}
       </div>
       {/* TODO: for demo purposes, remove this once the demo is done */}
       {!isGkk &&
       <div>
-        <RenderOthersDatasets loggedIn={!!session?.user} datasetsTheirs={datasetsTheirs} />
-        {errorTheirs && <><p class="error">{errorTheirs}</p></>}
+        <RenderOthersDatasets loggedIn={!!user} datasetsTheirs={datasetsTheirs} />
+        {errorTheirs && <><p class="error">foo {errorTheirs}</p></>}
       </div>
       }
     </Layout>

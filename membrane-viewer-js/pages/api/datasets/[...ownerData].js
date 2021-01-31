@@ -1,10 +1,10 @@
 // We can make some getSession here api is in pages 
-import { getSession } from 'next-auth/client'
+import { getUserInfo } from '../../../lib/user'
 import { processDatasets } from '../../../lib/serverDatasets'
 import { getSameDomainEmails } from '../../../lib/security'
 
 export default async function handler(req, res) {
-    const session = await getSession({ req })
+    const user = await getUserInfo({ req })
     const {
         query: { ownerData },
     } = req;
@@ -13,10 +13,10 @@ export default async function handler(req, res) {
     // depending on whether the command == "mine" or command == "theirs"
     const command = ownerData[0]
 
-    if (session) {
-        console.log(`api/datasets: Session exists.`)
+    if (user) {
+        console.log(`api/datasets: User exists.`)
         try {
-            const email = session.user.email
+            const email = user.email
             console.log(`api/datasets: Request for ${email}.`)
             console.log("api/datasets: Processing datasets.")
             if(command == "mine") {
@@ -39,7 +39,7 @@ export default async function handler(req, res) {
             res.status(401).json({ error: "api/datasets: processing error" })
         }
     } else {
-        console.log("api/datasets: Session error.")
-        res.status(403).json({ error: "api/datasets: session error" })
+        console.log("api/datasets: User error.")
+        res.status(403).json({ error: "api/datasets: User error" })
     }
 }
