@@ -1,6 +1,20 @@
 import Cookies from 'cookies'
 
-export default (req, res) => {
+import {
+    useSession,
+    getSession,
+} from 'next-auth/client'
+
+export default async (req, res) => {
+    // TODO(gkk): figure out why getSession requires wrapping req in {}
+    const session = await getSession({ req })
+    const originalUser = session?.user
+    const isAdmin = ['grzegorz.kossakowski@gmail.com', 'm.zdanowicz@gmail.com'].includes(originalUser?.email)
+    if (!isAdmin) {
+        const errorMsg = originalUser ? originalUser.email : "not logged in"
+        res.status(401).send(`You're not authorized to call this API end-point: ${errorMsg}`)
+        return
+    }
     // Create a cookies instance
     const cookies = new Cookies(req, res)
     // Get a cookie
