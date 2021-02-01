@@ -13,7 +13,7 @@ import { translate } from '../lib/auxiliary'
 
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import { useUserInfo  } from '../lib/user';
+import { useUserInfo, getGodMode } from '../lib/user';
 
 import {
   signIn,
@@ -71,8 +71,8 @@ function useTheirDatasets() {
   return { dataTheirs: data, errorTheirs: error }
 }
 
-export default function Home() {
-  const user = useUserInfo()
+export default function Home({ godMode }) {
+  const user = useUserInfo(godMode)
   // Getting datasets via SWR
   const { dataMine, errorMine } = useMyDatasets()
   const { dataTheirs, errorTheirs } = useTheirDatasets()
@@ -116,11 +116,14 @@ export default function Home() {
           <Link href="/">
             <a className={utilStyles.card} onClick={signOut}>
               <h3>Log out</h3>
-              <p>You are logged in as {user.email}</p>
+              <p>You are logged in as {godMode ? user.originalEmail : user.email}</p>
             </a>
           </Link>
         }
       </div>
+      { godMode &&
+          <p>God mode as: <i>{godMode}</i></p>
+      }
       <div>
         <RenderUserDatasets user={user} datasets={datasets} />
         {errorMine && <><p class="error">foo {errorMine}</p></>}
@@ -158,4 +161,15 @@ function RenderOthersDatasets({ loggedIn, datasetsTheirs }) {
     }
     else
       return <p>Loading their datasets...</p>
+}
+
+export async function getServerSideProps(context) {
+  const godMode = getGodMode(context.req)
+  console.log(`index.js godMode: ${godMode}`)
+  return {
+    props: {
+      // we need to convert undefined to null for JSON serialization to work
+      godMode: godMode ? godMode : null
+    },
+  }
 }

@@ -4,7 +4,7 @@ import { processDatasets } from '../../../lib/serverDatasets'
 import { getSameDomainEmails } from '../../../lib/security'
 
 export default async function handler(req, res) {
-    const user = await getUserInfo({ req })
+    const user = await getUserInfo( req )
     const {
         query: { ownerData },
     } = req;
