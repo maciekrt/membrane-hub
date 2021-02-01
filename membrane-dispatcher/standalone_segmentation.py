@@ -34,95 +34,91 @@ segm_notebook_filename = 'run_cellpose_GPU_membrane_3d.ipynb'
 bucket_name = "membranehubbucket"
 
 
+configs_for_segmentations = [
+{
+    "notebook_name": "run_cellpose_GPU_membrane_3d.ipynb",
+    "rendering_mode": "outlines",
+    "modifier": "",
+    "mode": "outlines"
+},
+{
+    "notebook_name": "run_cellpose_GPU_membrane_conv.ipynb",
+    "rendering_mode": "outlines",
+    "modifier": "_conv_clipped",
+    "mode": "outlines_conv_clipped"
+}]
+
+
 def main():
-    name = "m.zdanowicz@gmail.com"
+    name = "a.magalska@nencki.edu.pl"
     base_path = Path(config.IMAGESPATH) / name
     # Already downloaded
-    downloaded_remotely = True
+    downloaded_remotely = False
     print(f"I'm running: {base_path}.")
+    # test = [Path("/home/ubuntu/Projects/data/images/m.zdanowicz@gmail.com/FISH1_BDNF488_1_cLTP_1_CA_origina_Dec1.czi")]
+    # for dataset in test:
+    # test = [Path("/home/ubuntu/Projects/data/images/m.zdanowicz@gmail.com/") / name for name in test_names]
+    
     for dataset in tqdm(base_path.iterdir()):
         if dataset.is_dir() and dataset.stem != 'scratchpad':
             metadata = datasets_processing.load_metadata(dataset)
             if 'source' in metadata.keys():
                 image_path = Path(metadata['source'])
                 remote_path = downloads_path_remote / image_path.name
-                print(f"Processing {dataset}; source is {image_path}.")
                 # Upload flattens the whole directory structure just keeping names.
-                if not downloaded_remotely:
-                    upload_job = queue_dispatcher_high.enqueue(
-                        standalone_processing.upload_file_to_s3,
-                        bucket_name,
-                        image_path
-                    )
-                    download_job = queueHigh.enqueue(
-                        standalone_processing.download_file_from_s3,
-                        bucket_name,
-                        image_path.name,
-                        remote_path,
-                        depends_on=upload_job
-                    )
-                # Computing segmentations remotely
-                compute_job = queue.enqueue(
-                    standalone_processing.compute_segmentation,
-                    segm_notebook_filename,
-                    remote_path,
-                    job_timeout='60m',
-                    result_ttl=86400,
-                    depends_on=download_job
-                )
-                # Copying the result to the right folder remotely
-                s3_upload = queueHigh.enqueue(
-                    standalone_processing.finalize_segmentation_remotely,
-                    bucket_name,
-                    depends_on=compute_job
-                )
-                finalize_job = queue_dispatcher_high.enqueue(
-                    standalone_processing.finalize_locally,
-                    bucket_name,
-                    Path(config.SEGMENTATIONPATH) / name,
-                    depends_on=s3_upload
-                )
-                render_job = queue_dispatcher_default.enqueue(
-                    standalone_processing.render_segmentation,
-                    image_path,
-                    rendering_mode='outlines',
-                    depends_on=finalize_job
-                )
-                queue_dispatcher_high.enqueue(
-                    standalone_processing.copy_renderings,
-                    dataset,
-                    mode='outlines',
-                    depends_on=render_job,
-                    at_front=True
-                )
-
-# def main():
-#     name = "a.magalska@nencki.edu.pl"
-#     base_path = Path(config.IMAGESPATH) / name
-#     print(f"I'm running: {base_path}.")
-#     for dataset in tqdm(base_path.iterdir()):
-#         if dataset.is_dir() and dataset.stem != 'scratchpad':
-#             metadata = datasets_processing.load_metadata(dataset)
-#             if 'source' in metadata.keys():
-#                 print(f"Source is present. Processing {dataset}.")
-#                 file_path = Path(metadata['source'])
-#                 compute_job = queue_dispatcher_low.enqueue(
-#                     standalone_processing.compute_segmentation,
-#                     file_path,
-#                     job_timeout='60m',
-#                     result_ttl=86400
-#                 )
-#                 render_job = queue_dispatcher_default.enqueue(
-#                     standalone_processing.render_segmentation,
-#                     file_path,
-#                     depends_on=compute_job
-#                 )
-#                 queue_dispatcher_high.enqueue(
-#                     standalone_processing.copy_renderings,
-#                     dataset,
-#                     depends_on=render_job,
-#                     at_front=True
-#                 )
+                for config_segm in configs_for_segmentations:
+                    if metadata[config_segm['mode']] == False:
+                        print(f"{config_segm['mode']} for {dataset} requires work..")
+                        kwargs_additional = {}
+                        if not downloaded_remotely:
+                            upload_job = queue_dispatcher_high.enqueue(
+                                standalone_processing.upload_file_to_s3,
+                                bucket_name,
+                                image_path
+                            )
+                            download_job = queueHigh.enqueue(
+                                standalone_processing.download_file_from_s3,
+                                bucket_name,
+                                image_path.name,
+                                remote_path,
+                                depends_on=upload_job
+                            )
+                            kwargs_additional = {'depends_on': download_job}
+                        # Computing segmentations remotely
+                        compute_job = queue.enqueue(
+                            standalone_processing.compute_segmentation,
+                            config_segm['notebook_name'],
+                            remote_path,
+                            job_timeout='60m',
+                            result_ttl=86400,
+                            **kwargs_additional
+                        )
+                        # Copying the result to the right folder remotely
+                        s3_upload = queueHigh.enqueue(
+                            standalone_processing.finalize_segmentation_remotely,
+                            bucket_name,
+                            depends_on=compute_job
+                        )
+                        finalize_job = queue_dispatcher_high.enqueue(
+                            standalone_processing.finalize_locally,
+                            bucket_name,
+                            Path(config_segm.SEGMENTATIONPATH) / name,
+                            depends_on=s3_upload
+                        )
+                        render_job = queue_dispatcher_default.enqueue(
+                            standalone_processing.render_segmentation,
+                            image_path,
+                            rendering_mode=config_segm['rendering_mode'],
+                            modifier=config_segm['modifier'],
+                            depends_on=finalize_job
+                        )
+                        queue_dispatcher_high.enqueue(
+                            standalone_processing.copy_renderings,
+                            dataset,
+                            mode=config['mode'],
+                            depends_on=render_job,
+                            at_front=True
+                        )
 
 
 if __name__ == '__main__':

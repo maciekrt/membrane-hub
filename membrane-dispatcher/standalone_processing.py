@@ -83,6 +83,11 @@ def render_segmentation(source_image_path, rendering_mode, modifier=None):
         sizes=[(100, 100)]
     )
     return rendered_output
+
+
+def check_if_downloaded(path_remote, name):
+    file_path = path_remote / name
+    return file_path.is_file()
     
     
 def copy_renderings(dataset, mode):

@@ -4,7 +4,7 @@ import os
 from tqdm import tqdm
 
 path = Path("/home/ubuntu/Projects/data/images")
-email = "m.zdanowicz@gmail.com"
+email = "a.magalska@nencki.edu.pl"
 base_path = path / email
 
 states = { "outlines_conv_clipped": "outlines_conv_clipped",
