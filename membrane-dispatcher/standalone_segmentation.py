@@ -49,16 +49,13 @@ configs_for_segmentations = [
 }]
 
 
-def main():
-    name = "a.magalska@nencki.edu.pl"
-    base_path = Path(config.IMAGESPATH) / name
+def main(email, downloaded_remotely = True):
+    base_path = Path(config.IMAGESPATH) / email
     # Already downloaded
-    downloaded_remotely = False
     print(f"I'm running: {base_path}.")
     # test = [Path("/home/ubuntu/Projects/data/images/m.zdanowicz@gmail.com/FISH1_BDNF488_1_cLTP_1_CA_origina_Dec1.czi")]
     # for dataset in test:
-    # test = [Path("/home/ubuntu/Projects/data/images/m.zdanowicz@gmail.com/") / name for name in test_names]
-    
+    # test = [Path("/home/ubuntu/Projects/data/images/m.zdanowicz@gmail.com/") / email for name in test_names]
     for dataset in tqdm(base_path.iterdir()):
         if dataset.is_dir() and dataset.stem != 'scratchpad':
             metadata = datasets_processing.load_metadata(dataset)
@@ -102,7 +99,7 @@ def main():
                         finalize_job = queue_dispatcher_high.enqueue(
                             standalone_processing.finalize_locally,
                             bucket_name,
-                            Path(config_segm.SEGMENTATIONPATH) / name,
+                            Path(config_segm.SEGMENTATIONPATH) / email,
                             depends_on=s3_upload
                         )
                         render_job = queue_dispatcher_default.enqueue(
@@ -122,4 +119,4 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    main("a.magalska@nencki.edu.pl")
