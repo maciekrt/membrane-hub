@@ -1,6 +1,6 @@
 // We can make some getSession here api is in pages 
 import { getSession } from 'next-auth/client'
-import { securityCheck } from '../../../logic/security'
+import { securityCheck } from '../../../lib/security'
 
 export default async function handler(req, res) {
     const session = await getSession({ req }) 

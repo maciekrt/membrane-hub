@@ -18,28 +18,28 @@ export function processDatasets(email) {
          fs.statSync(baseDir + a).mtime.getTime();
    });
    // Some error handling should be added here.
-   // console.log(`logic/processDatasets: Directories read ${dirs}.`)
+   // console.log(`lib/processDatasets: Directories read ${dirs}.`)
    try {
       const resList = dirs.map((dir) => {
-         // console.log(`logic/processDatasets: ${dir}`)
+         // console.log(`lib/processDatasets: ${dir}`)
          const fs2 = require('fs');
          const metadataFile = fs2.readFileSync(`${FOLDER}${email}/${dir}/metadata.json`)
          const metadata = JSON.parse(metadataFile)
-         // console.log(`logic/processDatasets: Metadata ${metadataFile}.`)
+         // console.log(`lib/processDatasets: Metadata ${metadataFile}.`)
          return ({
             imagename: dir,
             metadata: metadata
          })
       })
-      // console.log(`logic/processDatasets[resList]: ${JSON.stringify(resList)}`)
+      // console.log(`lib/processDatasets[resList]: ${JSON.stringify(resList)}`)
       const result = {
          error: "OK",
          datasets: resList
       }
-      console.log("logic/processDatasets: Ok")
+      console.log("lib/processDatasets: Ok")
       return result
    } catch (err) {
-      console.log(`logic/processDatasets: ${error}`)
+      console.log(`lib/processDatasets: ${error}`)
    }
    return {
       error: "Error",
