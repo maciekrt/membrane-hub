@@ -78,10 +78,6 @@ def process_download(email):
     for file_path in list_files:
         generate_metadata(file_path, email)
 
-        if email == 'grzegorz.kossakowski@gmail.com':
-            logger.warn('Not scheduling any jobs for grzegorz.kossakowski@gmail.com after the download. This is done just for demo purposes only.')
-            continue
-
         render_job = queue_dispatcher_high.enqueue(
             render_image,
             file_path,
